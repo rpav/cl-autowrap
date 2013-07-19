@@ -339,7 +339,7 @@ Once you are aware of this, you can use something like
 ```lisp
 (defun lispy-get-thing ()
   (let* ((thing (get-thing))
-         (ptr (autowrap:ptr (get-thing))))
+         (ptr (autowrap:ptr thing)))
     (tg:finalize thing (lambda () (free-thing ptr)))
     thing))
 ```
