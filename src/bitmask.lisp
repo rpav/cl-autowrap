@@ -41,23 +41,37 @@ from the bitmask `NAME`."
                                   symbols))))
       whole))
 
+(defun mask-apply (name symbols)
+  (apply #'mask name symbols))
+
  ;; Utility
+
+(defun bitmask-symbols-to-alist (list &optional regex)
+  (let* ((scanner (ppcre:create-scanner "(\\W)(.*?)\\1"))
+         (trimmed-symbols
+           (mapcar (lambda (x)
+                     (ppcre:regex-replace scanner (string x) "\\2"))
+                   list))
+         (keyword-symbols (mapcar #'make-keyword (prefix-trim trimmed-symbols :regex regex))))
+    (loop for symbol in list
+          for keyword in keyword-symbols
+          collect ``(,',keyword . ,,symbol))))
 
 (defmacro define-bitmask-from-constants ((name &optional regex) &body values)
   "Define a bitmask `NAME` from a list of constants `VALUES`.  Each
 value should evaluate to actual values, e.g. actual `+CONSTANTS+`, or
-be a list in the form `'(SYMBOL VALUE)`.  If a symbol is given alone, it is
-by default pruned of any common prefix and made into a keyword.  If a list
-is specified, the symbol given is used exactly."
-  (let ((just-symbols (remove-if #'consp values))
-        (just-alist (remove-if #'symbolp values)))
-    (let* ((scanner (ppcre:create-scanner "(\\W)(.*?)\\1"))
-           (trimmed-symbols
-             (mapcar (lambda (x)
-                       (ppcre:regex-replace scanner (string x) "\\2"))
-                     just-symbols))
-           (keyword-symbols (mapcar #'make-keyword (prefix-trim trimmed-symbols :regex regex)))
-           (symbol-values (loop for symbol in just-symbols
-                                for keyword in keyword-symbols
-                                collect ``(,',keyword . ,,symbol))))
-      `(define-bitmask ',name (list ,@symbol-values ,@just-alist)))))
+be a list in the form `'(SYMBOL VALUE)`.  If a symbol is given alone,
+it is by default pruned of any common prefix and made into a keyword.
+If a list is specified, the symbol given is used exactly."
+  (let* ((just-symbols (remove-if #'consp values))
+         (just-alist (remove-if #'symbolp values))
+         (symbol-values (bitmask-symbols-to-alist just-symbols regex)))
+    `(define-bitmask ',name (list ,@symbol-values ,@just-alist))))
+
+(defmacro define-bitmask-from-enum ((name enum-name) &body values)
+  "Define a bitmask `NAME` from the values specified in the
+previously-defined foreign-enum named `ENUM-NAME` and any additional
+values, `VALUES`.  (A foreign-alias of an enum may also be
+specified.)"
+  (let ((enum-values (foreign-enum-values (find-type enum-name))))
+    `(define-bitmask ',name `(,@',enum-values ,,@values))))

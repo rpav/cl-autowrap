@@ -4,14 +4,14 @@
 (defvar *foreign-record-list* nil)
 (defvar *foreign-function-list* nil)
 (defvar *foreign-extern-list* nil)
-(defvar *foreign-const-list* nil)
+(defvar *foreign-other-exports-list* nil)
 (defvar *foreign-symbol-exceptions* nil)
 
  ;; Collecting symbols
 
 (defmacro collecting-symbols (&body body)
   `(let (*foreign-record-list* *foreign-function-list* *foreign-extern-list*
-         *foreign-const-list*)
+         *foreign-other-exports-list*)
      ,@body))
 
  ;; Types and symbols
@@ -175,8 +175,9 @@ Return the appropriate CFFI name."))
 (defmethod parse-form (form (tag (eql 'typedef)))
   (alist-bind (name type) form
     (let ((sym (foreign-type-symbol name :ctype *package*)))
-      (when (pointer*-to-record-form-p type)
-        (pushnew sym *foreign-record-list* :test #'equal))
+      (if (pointer*-to-record-form-p type)
+          (pushnew sym *foreign-record-list* :test #'equal)
+          (pushnew sym *foreign-other-exports-list*))
       `(define-foreign-alias
            ',sym
            ',@(parse-type type (aval :tag type))))))
@@ -231,6 +232,7 @@ Return the appropriate CFFI name."))
 (defmethod parse-form (form (tag (eql 'enum)))
   (alist-bind (name fields) form
     (let ((sym (foreign-type-symbol name :cenum *package*)))
+      (pushnew sym *foreign-other-exports-list*)
       `(define-foreign-enum ',sym ',(parse-enum-fields fields)))))
 
 (defmethod parse-form (form (tag (eql 'function)))
@@ -246,7 +248,7 @@ Return the appropriate CFFI name."))
 (defmethod parse-form (form (tag (eql 'const)))
   (alist-bind (name value) form
     (let ((sym (foreign-type-symbol name :cconst *package*)))
-      (pushnew sym *foreign-const-list*)
+      (pushnew sym *foreign-other-exports-list*)
       (if (stringp value)
           `(defvar ,sym ,value)
           `(defconstant ,sym ,value)))))
@@ -294,5 +296,5 @@ Return the appropriate CFFI name."))
                   `(export ',*foreign-function-list*))
                ,(when *foreign-extern-list*
                   `(export ',*foreign-extern-list*))
-               ,(when *foreign-const-list*
-                  `(export ',*foreign-const-list*)))))))))
+               ,(when *foreign-other-exports-list*
+                  `(export ',*foreign-other-exports-list*)))))))))

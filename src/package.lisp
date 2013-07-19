@@ -46,7 +46,8 @@
 
    ;; Bitmasks
    #:define-bitmask #:find-bitmask #:remove-bitmask #:mask-symbol-value
-   #:mask #:define-bitmask-from-constants
+   #:mask #:mask-apply
+   #:define-bitmask-from-constants #:define-bitmask-from-enum
 
    ;; Parsing and input
    #:c-include

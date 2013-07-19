@@ -79,6 +79,9 @@
   ((variadic-p :initarg :variadic-p
                :initform nil :accessor foreign-function-variadic-p)))
 
+(defmethod foreign-enum-values ((object foreign-alias))
+  (foreign-enum-values (foreign-type object)))
+
 (defun foreign-enum-value (foreign-enum key)
   (let ((enum (if (symbolp foreign-enum)
                   (find-type foreign-enum)
