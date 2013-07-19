@@ -4,12 +4,14 @@
 (defvar *foreign-record-list* nil)
 (defvar *foreign-function-list* nil)
 (defvar *foreign-extern-list* nil)
+(defvar *foreign-const-list* nil)
 (defvar *foreign-symbol-exceptions* nil)
 
  ;; Collecting symbols
 
 (defmacro collecting-symbols (&body body)
-  `(let (*foreign-record-list* *foreign-function-list* *foreign-extern-list*)
+  `(let (*foreign-record-list* *foreign-function-list* *foreign-extern-list*
+         *foreign-const-list*)
      ,@body))
 
  ;; Types and symbols
@@ -244,6 +246,7 @@ Return the appropriate CFFI name."))
 (defmethod parse-form (form (tag (eql 'const)))
   (alist-bind (name value) form
     (let ((sym (foreign-type-symbol name :cconst *package*)))
+      (pushnew sym *foreign-const-list*)
       (if (stringp value)
           `(defvar ,sym ,value)
           `(defconstant ,sym ,value)))))
@@ -290,4 +293,6 @@ Return the appropriate CFFI name."))
                ,(when *foreign-function-list*
                   `(export ',*foreign-function-list*))
                ,(when *foreign-extern-list*
-                  `(export ',*foreign-extern-list*)))))))))
+                  `(export ',*foreign-extern-list*))
+               ,(when *foreign-const-list*
+                  `(export ',*foreign-const-list*)))))))))
