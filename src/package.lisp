@@ -56,3 +56,13 @@
 
    ;; Utility
    #:asdf-path))
+
+(defpackage :autowrap.minimal
+  (:documentation "A minimal set of useful symbols for doing common things with autowrap.")
+  (:import-from
+   :autowrap
+
+   #:ptr #:invalidate #:enum-value #:enum-key #:mask #:mask-apply #:mask-keywords
+   #:alloc-ptr #:alloc #:with-alloc)
+  (:export #:ptr #:invalidate #:enum-value #:enum-key #:mask #:mask-apply #:mask-keywords
+           #:alloc-ptr #:alloc #:with-alloc))
