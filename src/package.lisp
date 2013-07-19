@@ -46,7 +46,7 @@
 
    ;; Bitmasks
    #:define-bitmask #:find-bitmask #:remove-bitmask #:mask-symbol-value
-   #:mask #:mask-apply
+   #:mask #:mask-apply #:mask-keywords
    #:define-bitmask-from-constants #:define-bitmask-from-enum
 
    ;; Parsing and input

@@ -46,6 +46,36 @@ from the bitmask `NAME`."
 
  ;; Utility
 
+(defconstant +debruijn64+ #x22fdd63cc95386d)
+(defvar *bit-table*
+  (let ((a (make-array 64 :element-type '(unsigned-byte 8))))
+    (loop for i from 0 below 64 do
+      (setf (aref a (ash (logand #xFFFFFFFFFFFFFFFF
+                                 (ash +debruijn64+ i)) -58)) i))
+    a))
+
+(defun ctz (x)
+  (declare (type (unsigned-byte 64) x))
+  (aref *bit-table* (ash (logand #xFFFFFFFFFFFFFFFF
+                                 (* +debruijn64+ (logand x (- x)))) -58)))
+
+(defun mask-keywords (name value)
+  "Return the list of keywords which describe the integer mask `VALUE`
+for the bitmask called `NAME`.  Limited to 64 bits at the moment."
+  (let ((bits (loop while (/= 0 value)
+                    as mask = (ash 1 (ctz value))
+                    collect mask
+                    do (setf value (logxor mask value))))
+        (bobs (sort (copy-list (find-bitmask name))
+                    (lambda (a b) (< (cdr a) (cdr b))))))
+    (loop while (and bits bobs)
+          if (= (car bits) (cdar bobs))
+            collect (prog1 (caar bobs) (pop bits) (pop bobs))
+          else do
+            (cond
+              ((< (car bits) (cdar bobs)) (pop bits))
+              ((> (car bits) (cdar bobs)) (pop bobs))))))
+
 (defun bitmask-symbols-to-alist (list &optional regex)
   (let* ((scanner (ppcre:create-scanner "(\\W)(.*?)\\1"))
          (trimmed-symbols
@@ -75,3 +105,4 @@ values, `VALUES`.  (A foreign-alias of an enum may also be
 specified.)"
   (let ((enum-values (foreign-enum-values (find-type enum-name))))
     `(define-bitmask ',name `(,@',enum-values ,,@values))))
+
