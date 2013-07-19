@@ -405,9 +405,10 @@ Create a type from `TYPESPEC` and return the `TYPE` structure representing it."
               (or (foreign-enum-value type-name value)
                   (error "Enum value not found: ~S" value)))
              ((integerp value) value)
-             (t `(etypecase ,name
-                   (symbol (foreign-enum-value ',type-name ,name))
-                   (integer ,name))))))
+             (t `(let ((,name ,value))
+                   (etypecase ,name
+                     (symbol (foreign-enum-value ',type-name ,name))
+                     (integer ,name)))))))
     `(let ((,name ,expansion))
        ,(next-ffi))))
 
