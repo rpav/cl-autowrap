@@ -465,13 +465,16 @@ types."
   (let ((basic-type (basic-foreign-type (foreign-type type))))
     (typecase basic-type
       (foreign-record
-       `(,(symbolicate "MAKE-" (foreign-type-name (foreign-type type)))
-         :ptr ,body))
+       (let ((*package* (symbol-package
+                         (foreign-type-name (foreign-type type)))))
+         `(,(symbolicate "MAKE-" (foreign-type-name (foreign-type type)))
+           :ptr ,body)))
       (otherwise body))))
 
 (defmethod foreign-wrap-up ((type foreign-alias) function body)
   (if (find-class (foreign-type-name type) nil)
-      `(,(symbolicate "MAKE-" (foreign-type-name type)) :ptr ,body)
+      (let ((*package* (symbol-package (foreign-type-name type))))
+        `(,(symbolicate "MAKE-" (foreign-type-name type)) :ptr ,body))
       (foreign-wrap-up (foreign-type type) function body)))
 
 (defun foreign-function-cbv-p (fun)
