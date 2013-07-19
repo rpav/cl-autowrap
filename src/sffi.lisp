@@ -82,13 +82,13 @@
 (defmethod foreign-enum-values ((object foreign-alias))
   (foreign-enum-values (foreign-type object)))
 
-(defun foreign-enum-value (foreign-enum key)
+(defun enum-value (foreign-enum key)
   (let ((enum (if (symbolp foreign-enum)
                   (find-type foreign-enum)
                   foreign-enum)))
     (aval key (foreign-enum-values enum))))
 
-(defun foreign-enum-key (foreign-enum val)
+(defun enum-key (foreign-enum val)
   (let ((enum (if (symbolp foreign-enum)
                   (find-type foreign-enum)
                   foreign-enum)))
@@ -402,12 +402,12 @@ Create a type from `TYPESPEC` and return the `TYPE` structure representing it."
          (expansion
            (cond
              ((keywordp value)
-              (or (foreign-enum-value type-name value)
+              (or (enum-value type-name value)
                   (error "Enum value not found: ~S" value)))
              ((integerp value) value)
              (t `(let ((,name ,value))
                    (etypecase ,name
-                     (symbol (foreign-enum-value ',type-name ,name))
+                     (symbol (enum-value ',type-name ,name))
                      (integer ,name)))))))
     `(let ((,name ,expansion))
        ,(next-ffi))))
@@ -746,3 +746,23 @@ types."
                                   'wrapper
                                   (foreign-type-name (foreign-type type)))))))))
 
+
+ ;; Allocating things
+
+(defun alloc-ptr (type)
+  "Return a pointer allocated to the size of `TYPE`"
+  (cffi-sys:%foreign-alloc (foreign-type-size type)))
+
+(defun alloc (type)
+  "Return a foreign wrapper for `TYPE` with its pointer
+allocated.  Freeing is up to you!"
+  (let ((wrapper (make-instance (foreign-type-name (find-type type)))))
+    (setf (wrapper-ptr wrapper)
+          (alloc-ptr type))
+    wrapper))
+
+(defmacro with-alloc ((name type) &body body)
+  `(let ((,name (alloc ,type)))
+     (unwind-protect (progn ,@body)
+       (cffi-sys:foreign-free (ptr ,name))
+       (invalidate ,name))))

@@ -27,7 +27,7 @@
    #:frf-bit-size
 
    #:foreign-enum #:foreign-enum-values
-   #:foreign-enum-value #:foreign-enum-key
+   #:enum-value #:enum-key
 
    #:foreign-symbol #:foreign-symbol-c-symbol
    #:foreign-extern
@@ -43,6 +43,8 @@
    #:bitfield-mask
    #:define-cfun #:define-cextern
    #:define-accessors #:define-wrapper
+
+   #:alloc-ptr #:alloc #:with-alloc
 
    ;; Bitmasks
    #:define-bitmask #:find-bitmask #:remove-bitmask #:mask-symbol-value

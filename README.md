@@ -497,8 +497,8 @@ interned as keywords.  Additionally, functions taking enum symbols can
 You can also find the value or keyword for an enum as follows:
 
 ```lisp
-(autowrap:foreign-enum-key 'enum-name :key)
-(autowrap:foreign-enum-value 'enum-name 1)
+(autowrap:enum-key 'enum-name :key)
+(autowrap:enum-value 'enum-name 1)
 ```
 
 An actual `AUTOWRAP:FOREIGN-ENUM` can be used in place of `'enum-name`
