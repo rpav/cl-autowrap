@@ -18,8 +18,7 @@ nor any compiler (or even `.h` files!) are necessary for your users!**
 * Accessors: Complete recursive accessors for structs and unions,
   including anonymous struct members, arrays, and pointers for each
   field.
-* Functions: Function definitions, with proper type declaration and
-  optional inlining
+* Functions: Macros which expand into foreign calls via CFFI-SYS
 * Metadata: Full access to all the information about all types,
   functions, etc.
 
@@ -236,7 +235,7 @@ Callbacks via `cffi:defcallback` should work normally.
 
 ### Functions
 
-`cl-autowrap` defines functions which wrap C calls with a few helpful
+`cl-autowrap` defines *macros* which wrap C calls with a few helpful
 features:
 
 * Wrappers (see below) or pointers are accepted for any
@@ -248,12 +247,6 @@ features:
 * For `char*` and `unsigned char*` returns, both a lisp string and a
   pointer are returned as `VALUES`, so you can free the pointer if
   necessary.
-* A `DECLAIM` is generated with proper `FTYPE` (except for return
-  type) and `INLINE`.  After the function, it is declaimed back to
-  `NOTINLINE`, so you may selectively pick which functions are
-  inlined.
-* Compiler macros are generated for functions as well; this includes
-  compile-time determination of enum values.
 
 Otherwise, the call will be like any C call; there is no other type
 translation.  In my experience, all but the most trivial C functions

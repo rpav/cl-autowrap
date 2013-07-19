@@ -476,18 +476,7 @@ types."
     (or (not (foreign-scalar-p (foreign-type fun)))
         (some (lambda (p) (not (foreign-scalar-p (foreign-type p)))) fields))))
 
-(defun make-cfun-declaim (fun)
-  (with-slots (name fields) fun
-    `(declaim (inline ,name)
-              (ftype (function ,(mapcar (lambda (x)
-                                          (foreign-type-to-lisp
-                                           (foreign-type x)))
-                                        fields)
-                               ;; Return types apparently give SBCL a headache
-                               #+(or),(foreign-type-to-lisp (foreign-type fun)))
-                     ,name))))
-
-(defun make-foreign-funcall (fun)
+(defun make-foreign-funcall (fun vargs)
   (with-slots (c-symbol fields) fun
     (if (foreign-function-cbv-p fun)
         `(error "Call-by-value not implemented yet for ~S" ',(foreign-type-name fun))
@@ -496,6 +485,7 @@ types."
                                                      (,@(loop for f in fields
                                                               collect (basic-foreign-type f)
                                                               collect (foreign-type-name f))
+                                                      ,@vargs
                                                       ,(basic-foreign-type
                                                         (foreign-type fun))))))))
 
@@ -503,25 +493,16 @@ types."
   (let ((fun (find-function name-or-function)))
     (with-slots (name type c-symbol fields) fun
       (let ((params (mapcar #'foreign-type-name fields)))
-        (with-gensyms (!fun !fields)
-          `(progn
-             ,(make-cfun-declaim fun)
-             (defun ,name ,params
-               ,(foreign-to-ffi
-                 (and (car fields) (foreign-type (car fields)))
-                 (and (car fields) (foreign-type-name (car fields)))
-                 params fields
-                 (make-foreign-funcall fun)))
-             (declaim (notinline ,name))
-             (define-compiler-macro ,name (,@params)
-               (let ((,!fun (find-function ',name-or-function)))
-                 (with-slots ((,!fields fields)) ,!fun
-                   (foreign-to-ffi
-                    (and (car ,!fields) (foreign-type (car ,!fields)))
-                    (and (car ,!fields) (foreign-type-name (car ,!fields)))
-                    (list ,@params)
-                    ,!fields
-                    (make-foreign-funcall ,!fun)))))))))))
+        (with-gensyms (!fun !fields rest)
+          `(defmacro ,name (,@params ,@(when (foreign-function-variadic-p fun) `(&rest ,rest)))
+             (let ((,!fun (find-function ',name-or-function)))
+               (with-slots ((,!fields fields)) ,!fun
+                 (foreign-to-ffi
+                  (and (car ,!fields) (foreign-type (car ,!fields)))
+                  (and (car ,!fields) (foreign-type-name (car ,!fields)))
+                  (list ,@params)
+                  ,!fields
+                  (make-foreign-funcall ,!fun ,(when (foreign-function-variadic-p fun) rest)))))))))))
 
 (defmacro define-cextern (name)
   (let* ((extern (find-extern name))
