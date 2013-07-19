@@ -43,17 +43,21 @@ from the bitmask `NAME`."
 
  ;; Utility
 
-(defmacro define-bitmask-from-constants ((name &optional regex) &body symbols)
-  "Define a bitmask `NAME` from a list of constants `SYMBOLS`.  These
-symbols should evaluate to actual values, e.g. actual `+CONSTANTS+`.
-By default, the symbols are pruned of any common prefix and made into
-keywords."
-  (let* ((scanner (ppcre:create-scanner "(\\W)(.*?)\\1"))
-         (trimmed-symbols
-           (mapcar (lambda (x) (ppcre:regex-replace scanner (string x) "\\2"))
-                   symbols))
-         (keyword-symbols (mapcar #'make-keyword (prefix-trim trimmed-symbols :regex regex))))
-    (loop for symbol in symbols
-          for keyword in keyword-symbols
-          collect ``(,',keyword . ',,symbol) into values
-          finally (return `(define-bitmask ',name (list ,@values))))))
+(defmacro define-bitmask-from-constants ((name &optional regex) &body values)
+  "Define a bitmask `NAME` from a list of constants `VALUES`.  Each
+value should evaluate to actual values, e.g. actual `+CONSTANTS+`, or
+be a list in the form `'(SYMBOL VALUE)`.  If a symbol is given alone, it is
+by default pruned of any common prefix and made into a keyword.  If a list
+is specified, the symbol given is used exactly."
+  (let ((just-symbols (remove-if #'consp values))
+        (just-alist (remove-if #'symbolp values)))
+    (let* ((scanner (ppcre:create-scanner "(\\W)(.*?)\\1"))
+           (trimmed-symbols
+             (mapcar (lambda (x)
+                       (ppcre:regex-replace scanner (string x) "\\2"))
+                     just-symbols))
+           (keyword-symbols (mapcar #'make-keyword (prefix-trim trimmed-symbols :regex regex)))
+           (symbol-values (loop for symbol in just-symbols
+                                for keyword in keyword-symbols
+                                collect ``(,',keyword . ,,symbol))))
+      `(define-bitmask ',name (list ,@symbol-values ,@just-alist)))))
