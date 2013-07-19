@@ -1,0 +1,4 @@
+*.fasl
+*.so
+example/example.lisp
+example/macros.lisp
