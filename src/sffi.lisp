@@ -496,8 +496,9 @@ types."
                                                       ,(basic-foreign-type
                                                         (foreign-type fun))))))))
 
-(defmacro define-cfun (name-or-function)
-  (let ((fun (find-function name-or-function)))
+(defmacro define-cfun (name-or-function &optional (package *package*))
+  (let ((*package* package)
+        (fun (find-function name-or-function)))
     (with-slots (name type c-symbol fields) fun
       (let ((params (mapcar #'foreign-type-name fields)))
         (with-gensyms (!fun !fields rest)
@@ -511,8 +512,9 @@ types."
                   ,!fields
                   (make-foreign-funcall ,!fun ,(when (foreign-function-variadic-p fun) rest)))))))))))
 
-(defmacro define-cextern (name)
-  (let* ((extern (find-extern name))
+(defmacro define-cextern (name &optional (package *package*))
+  (let* ((*package* package)
+         (extern (find-extern name))
          (ptr-or-error
            `(or (cffi-sys:%foreign-symbol-pointer ,(foreign-symbol-c-symbol extern) :default)
                 (error "Foreign extern symbol not found: ~S" ',name))))
@@ -631,7 +633,7 @@ types."
            (cffi-sys:%mem-set ,(make-bitfield-merge field ref (intern "V")) ,ref
                               ,(basic-foreign-type (foreign-type field))))
         *accessor-forms*)
-  (push `(export ',accessor) *accessor-forms*))
+  (push `(export ',accessor ,*package*) *accessor-forms*))
 
 (defun make-array-accessor (field accessor ref)
   (let* ((index (symbolicate "I" (princ-to-string *accessor-index*)))
@@ -648,7 +650,7 @@ types."
           (push `(defun (setf ,accessor) (,(intern "V") ,@(accessor-params))
                    ,(make-field-setter field ref (intern "V")))
                 *accessor-forms*)
-          (push `(export ',accessor) *accessor-forms*)))))
+          (push `(export ',accessor ,*package*) *accessor-forms*)))))
 
 (defun make-simple-accessor (field accessor ref)
   (push `(defun ,accessor (,@(accessor-params)) ,(make-field-deref field ref))
@@ -656,13 +658,13 @@ types."
   (push `(defun (setf ,accessor) (,(intern "V") ,@(accessor-params))
            ,(make-field-setter field ref (intern "V")))
         *accessor-forms*)
-  (push `(export ',accessor) *accessor-forms*))
+  (push `(export ',accessor ,*package*) *accessor-forms*))
 
 (defun make-child-accessor (accessor parent ref)
   (push `(defun ,accessor (,@(accessor-params))
            (make-child-wrapper :ptr ,ref :parent ,parent))
         *accessor-forms*)
-  (push `(export ',accessor) *accessor-forms*))
+  (push `(export ',accessor ,*package*) *accessor-forms*))
 
 (defun make-normal-type-accessor (field type accessor ref)
   (cond
@@ -689,7 +691,7 @@ types."
     (make-normal-type-accessor field (foreign-type field) accessor ref)
     (push `(defun ,accessor-ptr (,@(accessor-params)) ,ref)
           *accessor-forms*)
-    (push `(export ',accessor-ptr) *accessor-forms*)))
+    (push `(export ',accessor-ptr ,*package*) *accessor-forms*)))
 
 (defun %make-accessors (foreign-record &key prefix ref)
   (unless (or (member (foreign-type-name foreign-record)
@@ -707,8 +709,9 @@ types."
                   (make-bitfield-accessor field accessor field-ref)
                   (make-normal-accessor field accessor field-ref))))))
 
-(defmacro define-accessors (foreign-record)
-  (let ((foreign-record (etypecase foreign-record
+(defmacro define-accessors (foreign-record &optional (package *package*))
+  (let ((*package* (find-package package))
+        (foreign-record (etypecase foreign-record
                           (foreign-record foreign-record)
                           ((or symbol cons) (find-type foreign-record)))))
     (unless (and (typep foreign-record 'foreign-alias)
@@ -722,8 +725,9 @@ types."
           (%make-accessors actual-foreign-record :prefix *accessor-record-name*)
           `(progn ,@(nreverse *accessor-forms*)))))))
 
-(defmacro define-wrapper (type)
-  (let* ((type (etypecase type
+(defmacro define-wrapper (type &optional (package *package*))
+  (let* ((*package* package)
+         (type (etypecase type
                  (foreign-type type)
                  ((or symbol cons) (find-type type))))
          ;; Note this is a bit of a hack because the following is valid

@@ -4,6 +4,7 @@
 (defvar *foreign-record-list* nil)
 (defvar *foreign-function-list* nil)
 (defvar *foreign-extern-list* nil)
+(defvar *foreign-constant-list* nil)
 (defvar *foreign-other-exports-list* nil)
 (defvar *foreign-symbol-exceptions* nil)
 
@@ -11,7 +12,7 @@
 
 (defmacro collecting-symbols (&body body)
   `(let (*foreign-record-list* *foreign-function-list* *foreign-extern-list*
-         *foreign-other-exports-list*)
+         *foreign-constant-list* *foreign-other-exports-list*)
      ,@body))
 
  ;; Types and symbols
@@ -248,7 +249,7 @@ Return the appropriate CFFI name."))
 (defmethod parse-form (form (tag (eql 'const)))
   (alist-bind (name value) form
     (let ((sym (foreign-type-symbol name :cconst *package*)))
-      (pushnew sym *foreign-other-exports-list*)
+      (pushnew sym *foreign-constant-list*)
       (if (stringp value)
           `(defvar ,sym ,value)
           `(defconstant ,sym ,value)))))
@@ -263,10 +264,23 @@ Return the appropriate CFFI name."))
 
 (defmacro c-include (h-file &key (spec-path *default-pathname-defaults*)
                      symbol-exceptions exclude-definitions exclude-sources
-                     exclude-arch)
+                     exclude-arch
+                     (definition-package *package*)
+                     (function-package definition-package)
+                     (wrapper-package definition-package)
+                     (accessor-package wrapper-package)
+                     (constant-package definition-package)
+                     (extern-package accessor-package))
   (let ((*foreign-symbol-exceptions* (alist-hash-table symbol-exceptions :test 'equal))
+        (*package* (find-package definition-package))
         (h-file (path-or-asdf (eval h-file)))
-        (spec-path (path-or-asdf (eval spec-path))))
+        (spec-path (path-or-asdf (eval spec-path)))
+        (definition-package (find-package definition-package))
+        (function-package (find-package function-package))
+        (wrapper-package (find-package wrapper-package))
+        (accessor-package (find-package accessor-package))
+        (constant-package (find-package constant-package))
+        (extern-package (find-package extern-package)))
     (multiple-value-bind (h-name m-name)
         (ensure-local-spec h-file spec-path exclude-arch)
       (with-open-file (in-h h-name)
@@ -282,19 +296,21 @@ Return the appropriate CFFI name."))
                ,@(loop for form in (json:decode-json in-m)
                        collect (parse-form form (aval :tag form)))
                ,@(loop for record in (reverse *foreign-record-list*)
-                       collect `(define-wrapper ,record))
+                       collect `(define-wrapper ,record ,wrapper-package))
                ,@(loop for record in (reverse *foreign-record-list*)
-                       collect `(define-accessors ,record))
+                       collect `(define-accessors ,record ,accessor-package))
                ,@(loop for symbol in (reverse *foreign-function-list*)
-                       collect `(define-cfun ,symbol))
+                       collect `(define-cfun ,symbol ,function-package))
                ,@(loop for symbol in (reverse *foreign-extern-list*)
-                       collect `(define-cextern ,symbol))
+                       collect `(define-cextern ,symbol ,extern-package))
                ,(when *foreign-record-list*
                   `(export '(,@(mapcar (lambda (x) (etypecase x (symbol x) (cons (caadr x))))
                                 *foreign-record-list*))))
                ,(when *foreign-function-list*
-                  `(export ',*foreign-function-list*))
+                  `(export ',*foreign-function-list* ,function-package))
                ,(when *foreign-extern-list*
-                  `(export ',*foreign-extern-list*))
+                  `(export ',*foreign-extern-list* ,extern-package))
+               ,(when *foreign-constant-list*
+                  `(export ',*foreign-constant-list* ,constant-package))
                ,(when *foreign-other-exports-list*
-                  `(export ',*foreign-other-exports-list*)))))))))
+                  `(export ',*foreign-other-exports-list* ,definition-package)))))))))
