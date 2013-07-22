@@ -497,12 +497,12 @@ types."
                                                         (foreign-type fun))))))))
 
 (defmacro define-cfun (name-or-function &optional (package *package*))
-  (let ((*package* package)
-        (fun (find-function name-or-function)))
+  (let ((fun (find-function name-or-function)))
     (with-slots (name type c-symbol fields) fun
-      (let ((params (mapcar #'foreign-type-name fields)))
+      (let ((fun-name (intern (symbol-name name) package))
+            (params (mapcar #'foreign-type-name fields)))
         (with-gensyms (!fun !fields rest)
-          `(defmacro ,name (,@params ,@(when (foreign-function-variadic-p fun) `(&rest ,rest)))
+          `(defmacro ,fun-name (,@params ,@(when (foreign-function-variadic-p fun) `(&rest ,rest)))
              (let ((,!fun (find-function ',name-or-function)))
                (with-slots ((,!fields fields)) ,!fun
                  (foreign-to-ffi
