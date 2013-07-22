@@ -105,29 +105,23 @@ be a top-level statement**:
 (c-include "somefile.h")
 ```
 
-This will generally work if `somefile.h` is in a standard location.
-It will also look for and generate `.spec` files in
-`*default-pathname-defaults*`, which is probably not very helpful!
-To fix this, use the following:
+This will look for `somefile.h` and generate `.spec` files in
+`*default-pathname-defaults*`, which is probably not very helpful!  To
+fix this, use the following:
 
 ```lisp
-(c-include "somefile.h" :spec-path #P"/path/to/spec")
+(c-include (function-that-finds "somefile.h")
+           :spec-path #P"/path/to/spec")
 ```
 
 (Note that while these parameters *are* `eval`'d, this happens at
-*compile time*, so anything you use here probably needs surrounded by
-an `EVAL-WHEN`.)
+*compile time*, so if you use a `*special-variable*`, its definition
+needs surrounded by an `EVAL-WHEN`.)
 
-Hardcoded paths aren't very nice though; if we have an ASDF system
-called `my-wrapper`, we can do the following:
-
-```lisp
-(c-include "somefile.h" :spec-path '(my-wrapper))
-```
-
-This also works for the `.h` file; in both cases you can specify a
-complete "ASDF path" (starting with the system name), and it'll query
-the path from ASDF:
+Hardcoded paths and reinventing functionality aren't very nice though;
+In both cases you can specify a complete "ASDF path" (starting with
+the system name), and it'll query the path from ASDF.  For example, if
+we have an ASDF system called `my-wrapper`, we can do the following:
 
 ```lisp
 (c-include '(my-wrapper some-module "localfile.h")
@@ -137,6 +131,10 @@ the path from ASDF:
 Assuming you had defined "localfile.h" as a `:static-file` of
 `some-module` in `my-wrapper`, as well as `spec-module`, everything
 would work as intended.
+
+This is especially useful because you can have a single local header
+that includes all the files you wish to wrap, and those will be found
+by `c2ffi` in the standard include paths.
 
 ### Tweaking
 
