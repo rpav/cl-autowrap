@@ -217,6 +217,13 @@ Return the appropriate CFFI name."))
                                              :cenumfield *package*)
                         (aval :value field)))))
 
+(defun parse-enum-to-const (fields)
+  (loop for field in fields
+        as name = (aval :name field)
+        as sym = (foreign-type-symbol name :cconst *package*)
+        collect `(defconstant ,sym ,(aval :value field))
+        do (pushnew sym *foreign-constant-list*)))
+
 (defmethod parse-form (form (tag (eql 'struct)))
   (alist-bind (name fields) form
     (let ((sym (foreign-type-symbol name :cstruct *package*)))
@@ -245,7 +252,9 @@ Return the appropriate CFFI name."))
   (alist-bind (name fields) form
     (let ((sym (foreign-type-symbol name :cenum *package*)))
       (pushnew sym *foreign-other-exports-list*)
-      `(define-foreign-enum ',sym ',(parse-enum-fields fields)))))
+      `(progn
+         ,@(parse-enum-to-const fields)
+         (define-foreign-enum ',sym ',(parse-enum-fields fields))))))
 
 (defmethod parse-form (form (tag (eql 'function)))
   (alist-bind (name parameters return-type variadic) form
@@ -320,10 +329,14 @@ Return the appropriate CFFI name."))
                   `(export '(,@(mapcar (lambda (x) (etypecase x (symbol x) (cons (caadr x))))
                                 *foreign-record-list*))))
                ,(when *foreign-function-list*
-                  `(export ',*foreign-function-list* ,function-package))
+                  `(export ',(mapcar (lambda (x) (intern (symbol-name x) function-package))
+                                     *foreign-function-list*)
+                           ,function-package))
                ,(when *foreign-extern-list*
-                  `(export ',*foreign-extern-list* ,extern-package))
+                  `(export ',(mapcar (lambda (x) (intern (symbol-name x) extern-package))
+                                     *foreign-extern-list*) ,extern-package))
                ,(when *foreign-constant-list*
-                  `(export ',*foreign-constant-list* ,constant-package))
+                  `(export ',(mapcar (lambda (x) (intern (symbol-name x) constant-package))
+                                     *foreign-constant-list*) ,constant-package))
                ,(when *foreign-other-exports-list*
                   `(export ',*foreign-other-exports-list* ,definition-package)))))))))
