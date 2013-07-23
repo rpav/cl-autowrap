@@ -80,9 +80,8 @@
  ;; ASDF paths
 
 (defun asdf-path (system &rest path)
-  (asdf/component:component-pathname
-   (or (asdf/find-component:find-component
-        (asdf/system:find-system system t) path)
+  (asdf:component-pathname
+   (or (asdf:find-component (asdf:find-system system t) path)
        (error "System ~S path not found: ~S" system path))))
 
 (defun path-or-asdf (form)
