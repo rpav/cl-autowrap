@@ -12,6 +12,11 @@
                (format s "Error: Invalid/Destroyed Foreign Object: ~A" object)))))
 
 (declaim (inline make-ptr-object ptr-object-ptr))
+#+(or ccl allegro)
+(defstruct ptr-object
+  (ptr #.(cffi:null-pointer) :type #.(type-of (cffi:null-pointer))))
+
+#+(or cmucl ecl sbcl clisp)
 (defstruct ptr-object
   (ptr (cffi:null-pointer) :type #.(type-of (cffi:null-pointer))))
 

@@ -66,7 +66,7 @@
    ;; from bit-size, because bit-size is the full width of the field
    (bit-width :initarg :bit-width
               :initform 0 :accessor frf-bit-width
-              :type integer)))
+              :type (or null integer))))
 
 (defclass foreign-enum (foreign-type)
   ((values :initarg :values :initform nil :accessor foreign-enum-values)))
