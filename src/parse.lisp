@@ -61,7 +61,7 @@
          (setf tag :enum)
          (setf symbol-type :cenum))
         (t (error "Unknown tag for MAKE-RECORD-REF: ~S" tag)))
-      `((,tag (,(foreign-type-symbol name symbol-type *package*)
+      `((,tag (,(if (> id 0) nil (foreign-type-symbol name symbol-type *package*))
                ,@(when (> id 0)
                    `(:id ,id))))))))
 
@@ -249,12 +249,13 @@ Return the appropriate CFFI name."))
            ',cunion-fields)))))
 
 (defmethod parse-form (form (tag (eql 'enum)))
-  (alist-bind (name fields) form
+  (alist-bind (name id fields) form
     (let ((sym (foreign-type-symbol name :cenum *package*)))
-      (pushnew sym *foreign-other-exports-list*)
+      (when (symbol-package sym)
+        (pushnew sym *foreign-other-exports-list*))
       `(progn
          ,@(parse-enum-to-const fields)
-         (define-foreign-enum ',sym ',(parse-enum-fields fields))))))
+         (define-foreign-enum ',sym ,id ',(parse-enum-fields fields))))))
 
 (defmethod parse-form (form (tag (eql 'function)))
   (alist-bind (name parameters return-type variadic) form
@@ -312,9 +313,9 @@ Return the appropriate CFFI name."))
                    ,@(loop for form in (json:decode-json in-h)
                            unless (or (excluded-p (aval :name form) exclude-definitions)
                                       (excluded-p (aval :location form) exclude-sources))
-                             collect (parse-form form (aval :tag form)))))
-               ,@(loop for form in (json:decode-json in-m)
-                       collect (parse-form form (aval :tag form)))
+                             collect (parse-form form (aval :tag form)))
+                   ,@(loop for form in (json:decode-json in-m)
+                           collect (parse-form form (aval :tag form)))))
                ,@(loop for record in (reverse *foreign-record-list*)
                        collect `(define-wrapper ,record ,wrapper-package))
                ,@(loop for alias in (reverse *foreign-alias-list*)

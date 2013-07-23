@@ -87,5 +87,5 @@
 
 (defun path-or-asdf (form)
   (etypecase form
-    (string form)
+    ((or string pathname) form)
     (list (apply #'asdf-path (car form) (cdr form)))))

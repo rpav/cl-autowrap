@@ -203,7 +203,7 @@ appropriate."
           (parse-record-fields field-list))
     record))
 
-(defun define-foreign-enum (name value-list)
+(defun define-foreign-enum (name id value-list)
   "Define a foreign enum given `NAME`, a symbol, and a list of
 symbol-to-integer mappings, `VALUE-LIST`."
   ;; Type is somewhat irrelevant here; enums are always :int-sized and
@@ -211,8 +211,10 @@ symbol-to-integer mappings, `VALUE-LIST`."
   (loop for value in value-list do
     (assert (and (symbolp (car value))
                  (integerp (cdr value)))))
+  (when (and *foreign-record-index* (> id 0))
+    (setf (foreign-anonymous id) name))
   (let ((enum (make-instance 'foreign-enum :name name :type :int
-                             :values value-list)))
+                                           :values value-list)))
     (define-foreign-type `(:enum (,name)) enum)))
 
 (defun define-foreign-alias (name type)
@@ -314,7 +316,7 @@ Create a type from `TYPESPEC` and return the `TYPE` structure representing it."
         (ecase type
           (enum
            (let ((name (parse-record-name (cadr typespec))))
-             (define-foreign-enum name (cddr typespec))))
+             (define-foreign-enum name nil (cddr typespec))))
           ((struct union)
            (let ((name (parse-record-name (cadr typespec))))
              (destructuring-bind (_ &key bit-size bit-alignment &allow-other-keys)
@@ -322,7 +324,7 @@ Create a type from `TYPESPEC` and return the `TYPE` structure representing it."
                (declare (ignore _))
                (define-foreign-record name (make-keyword type) bit-size bit-alignment (cddr typespec)))))
           ((:enum :struct :union)
-           (let ((name (list type (parse-record-name (cdr typespec)))))
+           (let ((name (list type (list (parse-record-name (cadr typespec))))))
              (find-type name)))
           (:array
            (let ((type (ensure-type (cadr typespec)))
