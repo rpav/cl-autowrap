@@ -2,6 +2,7 @@
 
 (defvar *foreign-type-symbol-function* 'default-foreign-type-symbol)
 (defvar *foreign-record-list* nil)
+(defvar *foreign-alias-list* nil)
 (defvar *foreign-function-list* nil)
 (defvar *foreign-extern-list* nil)
 (defvar *foreign-constant-list* nil)
@@ -12,7 +13,7 @@
 
 (defmacro collecting-symbols (&body body)
   `(let (*foreign-record-list* *foreign-function-list* *foreign-extern-list*
-         *foreign-constant-list* *foreign-other-exports-list*)
+         *foreign-constant-list* *foreign-other-exports-list* *foreign-alias-list*)
      ,@body))
 
  ;; Types and symbols
@@ -79,6 +80,14 @@ of pointer-to-record"
     (if (string= ":pointer" tag)
         (pointer*-to-record-form-p (aval :type form))
         (record-form-p form))))
+
+(defun pointer-alias-form-p (form)
+  "If `FORM` is an alias to a pointer."
+  (let ((tag (aval :tag form)))
+    (cond
+      ((string= tag "typedef") (pointer-alias-form-p (aval :type form)))
+      ((string= tag ":pointer") t)
+      (t nil))))
 
  ;; Parsing
 
@@ -178,7 +187,9 @@ Return the appropriate CFFI name."))
     (let ((sym (foreign-type-symbol name :ctype *package*)))
       (if (pointer*-to-record-form-p type)
           (pushnew sym *foreign-record-list* :test #'equal)
-          (pushnew sym *foreign-other-exports-list*))
+          (if (pointer-alias-form-p type)
+              (pushnew sym *foreign-alias-list* :test #'equal)
+              (pushnew sym *foreign-other-exports-list*)))
       `(define-foreign-alias
            ',sym
            ',@(parse-type type (aval :tag type))))))
@@ -297,6 +308,8 @@ Return the appropriate CFFI name."))
                        collect (parse-form form (aval :tag form)))
                ,@(loop for record in (reverse *foreign-record-list*)
                        collect `(define-wrapper ,record ,wrapper-package))
+               ,@(loop for alias in (reverse *foreign-alias-list*)
+                       collect `(define-wrapper ,alias ,wrapper-package))
                ,@(loop for record in (reverse *foreign-record-list*)
                        collect `(define-accessors ,record ,accessor-package))
                ,@(loop for symbol in (reverse *foreign-function-list*)

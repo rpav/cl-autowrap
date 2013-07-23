@@ -413,7 +413,10 @@ Create a type from `TYPESPEC` and return the `TYPE` structure representing it."
        ,(next-ffi))))
 
 (defmethod foreign-to-ffi ((type foreign-alias) name params fields body)
-  (foreign-to-ffi (foreign-type type) name params fields body))
+  (if (eq :pointer (basic-foreign-type type))
+      `(let ((,name (autowrap:ptr ,(car params))))
+         ,(next-ffi))
+      (foreign-to-ffi (foreign-type type) name params fields body)))
 
 (defmethod foreign-to-ffi ((type foreign-pointer) name params fields body)
   `(let ((,name (ptr ,(car params))))
