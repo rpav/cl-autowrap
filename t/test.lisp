@@ -10,6 +10,7 @@
 (c-include '(cl-autowrap-test "test.h")
            :spec-path '(cl-autowrap-test))
 
+#+(or)
 (let ((foo (get-foo)))
   (:say foo)
   (:say (foo-t.a foo))
