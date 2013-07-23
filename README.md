@@ -410,7 +410,7 @@ Also, you may be tempted to do this, to avoid "dangling pointers":
 ```lisp
 (defun terrible-get-thing ()
   (let* ((thing (get-thing))
-         (ptr (autowrap:ptr (get-thing))))
+         (ptr (autowrap:ptr thing)))
     (tg:finalize thing
       (lambda ()
         (free-thing ptr)
