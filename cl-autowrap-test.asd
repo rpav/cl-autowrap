@@ -9,7 +9,7 @@
   :license "LLGPL"
   :version "0.0"
 
-  :depends-on ()
+  :depends-on (:cl-autowrap)
   :pathname "t"
   :serial t
 

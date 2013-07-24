@@ -3,10 +3,12 @@
 
 (in-package :autowrap.test)
 
+#+(or)
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (cffi-sys:%load-foreign-library
    :libtest (merge-pathnames "libtest.so" (asdf-path 'cl-autowrap-test))))
 
+#+(or)
 (c-include '(cl-autowrap-test "test.h")
            :spec-path '(cl-autowrap-test))
 
