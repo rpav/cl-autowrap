@@ -166,7 +166,7 @@ exclude the majority of irrelevant definitions.
 The second, `:exclude-definitions`, excludes specific definitions.
 These may be conflicting or unnecessary.  For instance, SDL2 includes
 a number of functions ending in `_inline` and some functions which use
-stdargs, all of which are unnecessary (or unsuable).
+stdargs, all of which are unnecessary (or unusable).
 
 Both of these use `cl-ppcre` regular expressions to match, thus you
 have a great deal of flexibility with a few strings.
