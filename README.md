@@ -89,7 +89,7 @@ interface with `CFFI:DEFINE-FOREIGN-LIBRARY` and
 
 ### Writing the `c-include`
 
-I's highly recommended that you use a separate package *and* file for
+It's highly recommended that you use a separate package *and* file for
 `cl-autowrap`.  The reasons are simple:
 
 * A *lot* of symbols will be generated without regard.
