@@ -286,6 +286,7 @@ Return the appropriate CFFI name."))
 (defmacro c-include (h-file &key (spec-path *default-pathname-defaults*)
                      symbol-exceptions exclude-definitions exclude-sources
                      exclude-arch
+                     sysincludes
                      (definition-package *package*)
                      (function-package definition-package)
                      (wrapper-package definition-package)
@@ -303,7 +304,10 @@ Return the appropriate CFFI name."))
         (constant-package (find-package constant-package))
         (extern-package (find-package extern-package)))
     (multiple-value-bind (h-name m-name)
-        (ensure-local-spec h-file spec-path exclude-arch)
+        (ensure-local-spec h-file
+                           :spec-path spec-path
+                           :arch-excludes exclude-arch
+                           :sysincludes sysincludes)
       (with-open-file (in-h h-name)
         (with-open-file (in-m m-name)
           (collecting-symbols

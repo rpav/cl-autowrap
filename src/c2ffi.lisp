@@ -46,19 +46,24 @@
 doesn't exist, we will get a return code other than 0."
   (= 0 (nth-value 1 (external-program:run "c2ffi" '("-h")))))
 
-(defun run-c2ffi (input-file output-basename &optional arch)
+(defun run-c2ffi (input-file output-basename &key arch sysincludes)
   "Run c2ffi on `INPUT-FILE`, outputting to `OUTPUT-FILE` and
 `MACRO-OUTPUT-FILE`, optionally specifying a target triple `ARCH`."
   (let ((output-h (string+ output-basename ".h"))
         (output-m (string+ output-basename ".macro.spec"))
         (output-spec (string+ output-basename ".spec"))
-        (arch (when arch (list "-A" arch))))
+        (arch (when arch (list "-A" arch)))
+        (sysincludes (loop :for dir :in sysincludes
+                        :append (list "-i" dir))))
     (when (run-check "c2ffi" (list* input-file
                                     "-o" output-spec
                                     "-M" output-h
-                                    arch)
+                                    (append arch
+                                            sysincludes))
                      :output *standard-output*)
-      (run-check "c2ffi" (list* output-h "-o" output-m arch)
+      (run-check "c2ffi" (list* output-h "-o" output-m
+                                (append arch
+                                        sysincludes))
                  :output *standard-output*))))
 
  ;; Specs and Loading
@@ -77,8 +82,10 @@ if the file does not exist."
                (probe-file m-name))
       (values h-name m-name))))
 
-(defun ensure-local-spec (name &optional (spec-path *default-pathname-defaults*)
-                          arch-excludes)
+(defun ensure-local-spec (name &key
+                                 (spec-path *default-pathname-defaults*)
+                                 arch-excludes
+                                 sysincludes)
   (flet ((spec-path (arch) (string+ (namestring spec-path)
                                     (pathname-name name)
                                     "." arch)))
@@ -90,13 +97,17 @@ if the file does not exist."
               (error "No spec for ~S on arch '~A' and c2ffi not found"
                      name (local-arch)))
             (let ((arch (local-arch)))
-              (unless (run-c2ffi name (spec-path arch) arch)
+              (unless (run-c2ffi name (spec-path arch)
+                                 :arch arch
+                                 :sysincludes sysincludes)
                 (error "Error running c2ffi on ~S" name)))
             (loop with local-arch = (local-arch)
                   for arch in *known-arches* do
                     (unless (or (string= local-arch arch)
                                 (member arch arch-excludes :test #'string=))
-                      (unless (run-c2ffi name (spec-path arch) arch)
+                      (unless (run-c2ffi name (spec-path arch)
+                                         :arch arch
+                                         :sysincludes sysincludes)
                         (warn "Error generating spec for other arch: ~S" arch))))
             (multiple-value-bind (h-name m-name) (find-local-spec name spec-path)
               (if h-name
