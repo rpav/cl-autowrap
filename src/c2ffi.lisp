@@ -53,8 +53,8 @@ doesn't exist, we will get a return code other than 0."
         (output-m (string+ output-basename ".macro.spec"))
         (output-spec (string+ output-basename ".spec"))
         (arch (when arch (list "-A" arch)))
-        (sysincludes (loop :for dir :in sysincludes
-                        :append (list "-i" dir))))
+        (sysincludes (loop for dir in sysincludes
+                           append (list "-i" dir))))
     (when (run-check "c2ffi" (list* input-file
                                     "-o" output-spec
                                     "-M" output-h

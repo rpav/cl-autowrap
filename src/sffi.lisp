@@ -335,7 +335,8 @@ Create a type from `TYPESPEC` and return the `TYPE` structure representing it."
           (:pointer
            (define-foreign-type
                `(:pointer ,(cdr typespec))
-               (make-instance 'foreign-pointer :type (ensure-type (cadr typespec)))))))))
+               (make-instance 'foreign-pointer :type (ensure-type (cadr typespec)))))
+          (:void :void)))))
 
  ;; Making Things
 
@@ -758,20 +759,23 @@ types."
 
  ;; Allocating things
 
-(defun alloc-ptr (type)
+(defun alloc-ptr (type &optional count)
   "Return a pointer allocated to the size of `TYPE`"
-  (cffi-sys:%foreign-alloc (foreign-type-size type)))
+  (cffi-sys:%foreign-alloc (* count (foreign-type-size type))))
 
-(defun alloc (type)
+(defun alloc (type &optional count)
   "Return a foreign wrapper for `TYPE` with its pointer
 allocated.  Freeing is up to you!"
   (let ((wrapper (make-instance (foreign-type-name (find-type type)))))
     (setf (wrapper-ptr wrapper)
-          (alloc-ptr type))
+          (alloc-ptr type count))
     wrapper))
 
-(defmacro with-alloc ((name type) &body body)
-  `(let ((,name (alloc ,type)))
+(defmacro with-alloc ((name type &optional count) &body body)
+  `(let ((,name (alloc ,type ,count)))
      (unwind-protect (progn ,@body)
        (cffi-sys:foreign-free (ptr ,name))
        (invalidate ,name))))
+
+(defun ptr[] (wrapper index)
+  )
