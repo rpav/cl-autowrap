@@ -576,6 +576,7 @@ types."
 (defvar *accessor-seen-types* nil)
 (defvar *accessor-recursive-max-depth* 5)
 (defvar *accessor-index* 0)
+(defvar *accessor-declare* nil)
 
 (defvar *wrapped-type-names* nil)
 
@@ -633,9 +634,11 @@ types."
         name)))
 
 (defun make-bitfield-accessor (field accessor ref)
-  (push `(defun ,accessor (,@(accessor-params)) ,(make-bitfield-deref field ref))
+  (push `(defun ,accessor (,@(accessor-params))
+           ,*accessor-declare* ,(make-bitfield-deref field ref))
         *accessor-forms*)
   (push `(defun (setf ,accessor) (,(intern "V") ,@(accessor-params))
+           ,*accessor-declare*
            (cffi-sys:%mem-set ,(make-bitfield-merge field ref (intern "V")) ,ref
                               ,(basic-foreign-type (foreign-type field))))
         *accessor-forms*)
@@ -651,23 +654,25 @@ types."
         (make-normal-type-accessor field (foreign-type (foreign-type field))
                                    accessor ref)
         (progn
-          (push `(defun ,accessor (,@(accessor-params)) ,(make-field-deref field ref))
+          (push `(defun ,accessor (,@(accessor-params))
+                   ,*accessor-declare* ,(make-field-deref field ref))
                 *accessor-forms*)
           (push `(defun (setf ,accessor) (,(intern "V") ,@(accessor-params))
-                   ,(make-field-setter field ref (intern "V")))
+                   ,*accessor-declare* ,(make-field-setter field ref (intern "V")))
                 *accessor-forms*)
           (push `(export ',accessor ,*package*) *accessor-forms*)))))
 
 (defun make-simple-accessor (field accessor ref)
-  (push `(defun ,accessor (,@(accessor-params)) ,(make-field-deref field ref))
+  (push `(defun ,accessor (,@(accessor-params)) ,*accessor-declare* ,(make-field-deref field ref))
         *accessor-forms*)
-  (push `(defun (setf ,accessor) (,(intern "V") ,@(accessor-params))
+  (push `(defun (setf ,accessor) (,(intern "V") ,@(accessor-params)) ,*accessor-declare*
            ,(make-field-setter field ref (intern "V")))
         *accessor-forms*)
   (push `(export ',accessor ,*package*) *accessor-forms*))
 
 (defun make-child-accessor (accessor parent ref)
   (push `(defun ,accessor (,@(accessor-params))
+           ,*accessor-declare*
            (make-child-wrapper :ptr ,ref :parent ,parent))
         *accessor-forms*)
   (push `(export ',accessor ,*package*) *accessor-forms*))
@@ -695,7 +700,7 @@ types."
 (defun make-normal-accessor (field accessor ref)
   (let ((accessor-ptr (symbolicate accessor "&")))
     (make-normal-type-accessor field (foreign-type field) accessor ref)
-    (push `(defun ,accessor-ptr (,@(accessor-params)) ,ref)
+    (push `(defun ,accessor-ptr (,@(accessor-params)) ,*accessor-declare* ,ref)
           *accessor-forms*)
     (push `(export ',accessor-ptr ,*package*) *accessor-forms*)))
 
@@ -706,6 +711,8 @@ types."
     (let* ((*accessor-seen-types* (list* (foreign-type-name foreign-record)
                                          *accessor-seen-types*))
            (*accessor-recursive-max-depth* (1- *accessor-recursive-max-depth*))
+           (*accessor-declare* `(declare (type ,*accessor-record-name*
+                                               ,*accessor-record-name*)))
            (ref (or ref `(ptr ,*accessor-record-name*))))
       (loop for field in (foreign-record-fields foreign-record)
             as accessor = (make-accessor-name field prefix)
