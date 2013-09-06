@@ -366,7 +366,7 @@ Create a type from `TYPESPEC` and return the `TYPE` structure representing it."
            (foreign-type-name type)
            (type-of (cffi:null-pointer))))
       ((typep basic-type 'foreign-record)
-       'ptr-object)
+       'wrapper)
       ((member type *signed-types*) `(signed-byte ,type-size))
       ((eq :float type) 'single-float)
       ((eq :double type) 'double-float)
@@ -670,10 +670,11 @@ types."
         *accessor-forms*)
   (push `(export ',accessor ,*package*) *accessor-forms*))
 
-(defun make-child-accessor (accessor parent ref)
+(defun make-child-accessor (accessor type parent ref)
   (push `(defun ,accessor (,@(accessor-params))
            ,*accessor-declare*
-           (make-child-wrapper :ptr ,ref :parent ,parent))
+           (,(intern (concatenate 'string "MAKE-" (foreign-type-name type))
+                     *package*) :ptr ,ref :parent ,parent))
         *accessor-forms*)
   (push `(export ',accessor ,*package*) *accessor-forms*))
 
@@ -693,7 +694,7 @@ types."
                          :prefix accessor
                          :ref (make-field-deref field ref)))))
     ((typep (basic-foreign-type type) 'foreign-record)
-     (make-child-accessor accessor *accessor-record-name* ref)
+     (make-child-accessor accessor type *accessor-record-name* ref)
      (%make-accessors (basic-foreign-type type) :prefix accessor :ref ref))
     (t (make-simple-accessor field accessor ref))))
 
@@ -766,11 +767,11 @@ types."
 
  ;; Allocating things
 
-(defun alloc-ptr (type &optional count)
+(defun alloc-ptr (type &optional (count 1))
   "Return a pointer allocated to the size of `TYPE`"
   (cffi-sys:%foreign-alloc (* count (foreign-type-size type))))
 
-(defun alloc (type &optional count)
+(defun alloc (type &optional (count 1))
   "Return a foreign wrapper for `TYPE` with its pointer
 allocated.  Freeing is up to you!"
   (let ((wrapper (make-instance (foreign-type-name (find-type type)))))
@@ -778,7 +779,7 @@ allocated.  Freeing is up to you!"
           (alloc-ptr type count))
     wrapper))
 
-(defmacro with-alloc ((name type &optional count) &body body)
+(defmacro with-alloc ((name type &optional (count 1)) &body body)
   `(let ((,name (alloc ,type ,count)))
      (unwind-protect (progn ,@body)
        (cffi-sys:foreign-free (ptr ,name))
