@@ -775,27 +775,33 @@ types."
   (cffi-sys:%foreign-alloc (* count (foreign-type-size type))))
 
 (defun alloc (type &optional (count 1))
-  "Return a foreign wrapper for `TYPE` with its pointer
-allocated.  Freeing is up to you!"
-  (let ((wrapper (make-instance (foreign-type-name (find-type type)))))
-    (setf (wrapper-ptr wrapper)
-          (alloc-ptr type count))
-    wrapper))
+  "Return a foreign wrapper for `TYPE` with its pointer allocated.
+Freeing is up to you!"
+  (etypecase type
+    (keyword (alloc-ptr type count))
+    (symbol
+     (let ((wrapper (make-instance (foreign-type-name (find-type type)))))
+       (setf (wrapper-ptr wrapper)
+             (alloc-ptr type count))
+       wrapper))))
+
+(defun free (object)
+  "Free WRAPPER via FOREIGN-FREE and invalidate."
+  (cffi-sys:foreign-free (ptr object))
+  (when (wrapper-p object)
+    (invalidate object))
+  (values))
 
 (defmacro with-alloc ((name type &optional (count 1)) &body body)
   `(let ((,name (alloc ,type ,count)))
      (unwind-protect (progn ,@body)
-       (cffi-sys:foreign-free (ptr ,name))
-       (invalidate ,name))))
+       (free ,name))))
 
 (defmacro with-many-alloc ((&rest bindings) &body body)
   `(let ,(mapcar #'(lambda (bind) `(,(car bind) (alloc ,@(cdr bind))))
           bindings)
      (unwind-protect (progn ,@body)
-       ,@(mapcar #'(lambda (bind) `(cffi-sys:foreign-free (autowrap:ptr ,(car bind))))
-                 bindings)
-       ,@(mapcar #'(lambda (bind) `(autowrap:invalidate ,(car bind)))
-                 bindings))))
+       ,@(mapcar #'(lambda (bind) `(free ,(car bind))) bindings))))
 
 (defun ptr[] (wrapper index)
   )
