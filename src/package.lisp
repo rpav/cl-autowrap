@@ -5,13 +5,10 @@
    #:invalid-wrapper
 
    ;; Structs
-   #:ptr-object #:wrapper #:child-wrapper
+   #:wrapper
 
    ;; Functions
    #:make-wrapper #:wrapped-ptr #:wrapper-valid-p
-   #:make-child-wrapper #:child-wrapper-ptr #:child-valid-p
-   #:child-wrapper-parent
-
    #:ptr #:valid-p #:invalidate
 
    #:parse #:parse-file

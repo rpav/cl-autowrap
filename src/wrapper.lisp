@@ -11,47 +11,34 @@
              (with-slots (object) c
                (format s "Error: Invalid/Destroyed Foreign Object: ~A" object)))))
 
-(declaim (inline make-ptr-object ptr-object-ptr))
-#+(or ccl allegro)
-(defstruct ptr-object
-  (ptr #.(cffi:null-pointer) :type #.(type-of (cffi:null-pointer))))
+(declaim (inline make-wrapper wrapper-ptr))
+(defstruct wrapper
+  #+(or cmucl ecl sbcl clisp)
+  (ptr (cffi:null-pointer) :type #.(type-of (cffi:null-pointer)))
+  #+(or ccl allegro)
+  (ptr #.(cffi:null-pointer) :type #.(type-of (cffi:null-pointer)))
+  (validity t))
 
-#+(or cmucl ecl sbcl clisp)
-(defstruct ptr-object
-  (ptr (cffi:null-pointer) :type #.(type-of (cffi:null-pointer))))
+(defun wrapper-valid-p (wrapper)
+  (let ((v (wrapper-validity wrapper)))
+    (etypecase v
+      (wrapper (wrapper-valid-p v))
+      (t v))))
 
-(declaim (inline make-wrapper wrapper-ptr wrapper-valid-p))
-(defstruct (wrapper (:include ptr-object))
-  (valid-p t :type boolean))
-
-(declaim (inline make-child-wrapper child-wrapper-ptr child-valid-p))
-(defstruct (child-wrapper (:include ptr-object))
-  (parent nil :type (or null wrapper)))
-
-(defun child-valid-p (child-wrapper)
-  (let ((parent (child-wrapper-parent child-wrapper)))
-    (and parent (wrapper-valid-p parent))))
-
-(declaim (inline ptr))
+(declaim (inline ptr valid-p))
 (defun ptr (wrapper)
   (etypecase wrapper
     (#.(type-of (cffi:null-pointer)) wrapper)
     (wrapper
      (if (wrapper-valid-p wrapper)
-         (ptr-object-ptr wrapper)
-         (error 'invalid-wrapper :object wrapper)))
-    (child-wrapper
-     (if (child-valid-p wrapper)
-         (ptr-object-ptr wrapper)
+         (wrapper-ptr wrapper)
          (error 'invalid-wrapper :object wrapper)))))
 
 (defun valid-p (wrapper)
-  (etypecase wrapper
-    (wrapper (wrapper-valid-p wrapper))
-    (child-wrapper (child-valid-p wrapper))))
+  (wrapper-valid-p wrapper))
 
 (defun invalidate (wrapper)
-  (setf (wrapper-valid-p wrapper) nil)
+  (setf (wrapper-validity wrapper) nil)
   (wrapper-ptr wrapper))
 
 (defmethod print-object ((object wrapper) stream)

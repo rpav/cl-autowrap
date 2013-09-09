@@ -284,7 +284,8 @@ Return the appropriate CFFI name."))
  ;; Exported API
 
 (defmacro c-include (h-file &key (spec-path *default-pathname-defaults*)
-                     symbol-exceptions exclude-definitions exclude-sources
+                     symbol-exceptions symbol-regex
+                     exclude-definitions exclude-sources
                      exclude-arch
                      sysincludes
                      (definition-package *package*)
