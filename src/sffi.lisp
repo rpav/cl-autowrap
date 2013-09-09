@@ -784,5 +784,14 @@ allocated.  Freeing is up to you!"
        (cffi-sys:foreign-free (ptr ,name))
        (invalidate ,name))))
 
+(defmacro with-many-alloc ((&rest bindings) &body body)
+  `(let ,(mapcar #'(lambda (bind) `(,(car bind) (alloc ,@(cdr bind))))
+          bindings)
+     (unwind-protect (progn ,@body)
+       ,@(mapcar #'(lambda (bind) `(cffi-sys:foreign-free (autowrap:ptr ,(car bind))))
+                 bindings)
+       ,@(mapcar #'(lambda (bind) `(autowrap:invalidate ,(car bind)))
+                 bindings))))
+
 (defun ptr[] (wrapper index)
   )

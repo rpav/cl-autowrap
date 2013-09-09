@@ -44,7 +44,7 @@
    #:define-cfun #:define-cextern
    #:define-accessors #:define-wrapper
 
-   #:alloc-ptr #:alloc #:with-alloc
+   #:alloc-ptr #:alloc #:with-alloc #:with-many-alloc
 
    ;; Bitmasks
    #:define-bitmask #:find-bitmask #:remove-bitmask #:mask-symbol-value
@@ -63,6 +63,6 @@
    :autowrap
 
    #:ptr #:invalidate #:enum-value #:enum-key #:mask #:mask-apply #:mask-keywords
-   #:alloc-ptr #:alloc #:with-alloc)
+   #:alloc-ptr #:alloc #:with-alloc #:with-many-alloc)
   (:export #:ptr #:invalidate #:enum-value #:enum-key #:mask #:mask-apply #:mask-keywords
-           #:alloc-ptr #:alloc #:with-alloc))
+           #:alloc-ptr #:alloc #:with-alloc #:with-many-alloc))
