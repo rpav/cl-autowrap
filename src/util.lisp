@@ -53,9 +53,9 @@
 
  ;; testing
 
-(defun excluded-p (thing excludes)
+(defun included-p (thing includes)
   (when thing
-    (loop for scanner in excludes do
+    (loop for scanner in includes do
       (when (cl-ppcre:scan scanner thing)
         (return t)))))
 

@@ -297,8 +297,8 @@ Return the appropriate CFFI name."))
 
 (defmacro c-include (h-file &key (spec-path *default-pathname-defaults*)
                      symbol-exceptions symbol-regex
-                     exclude-definitions exclude-sources
-                     exclude-arch
+                     exclude-definitions exclude-sources exclude-arch
+                     include-sources
                      sysincludes
                      (definition-package *package*)
                      (function-package definition-package)
@@ -342,8 +342,9 @@ Return the appropriate CFFI name."))
                (progn
                  (setf *foreign-record-index* (make-hash-table))
                  ,@(loop for form in (json:decode-json in-h)
-                         unless (or (excluded-p (aval :name form) exclude-definitions)
-                                    (excluded-p (aval :location form) exclude-sources))
+                         unless (or (included-p (aval :name form) exclude-definitions)
+                                    (and (included-p (aval :location form) exclude-sources)
+                                         (not (included-p (aval :location form) include-sources))))
                            collect (parse-form form (aval :tag form)))
                  ,@(loop for form in (json:decode-json in-m)
                          collect (parse-form form (aval :tag form)))
