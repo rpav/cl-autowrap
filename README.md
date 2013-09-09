@@ -318,10 +318,8 @@ Results in:
 This ensures type compatibility where the C side may arbitrarily
 specify compatible type aliases.
 
-There is a second type of wrapper as well, `CHILD-WRAPPER`.  This
-differs from `WRAPPER` in that the second field is a reference to the
-*parent* wrapper.  You may obtain a child wrapper for a struct which
-is a field in another struct, using accessors:
+You may also obtain a "child" wrapper for a struct which is a field in
+another struct, using accessors:
 
 ```c
 struct foo_t {
@@ -338,10 +336,10 @@ struct foo_t {
   ... )
 ```
 
-Child wrappers may also be safely dereferenced using `AUTOWRAP:PTR`,
-and checked using `AUTOWRAP:VALID-P`.  In this case, validity is
-checked through the parent.  Because a reference is kept to the
-parent, even if the reference is discarded by the user, the child is
+This keeps a reference to the parent.  These may also be safely
+dereferenced using `AUTOWRAP:PTR`, and checked using
+`AUTOWRAP:VALID-P`.  Because there is a reference is kept to the
+parent, even if a reference is discarded by the user, the child is
 still safe to use.
 
 ### Garbage Collection and Wrappers
@@ -401,7 +399,7 @@ You may be tempted to do this:
 Unfortunately, since you invalidated `THING`, when you pass it to
 `FREE-THING`, it will be invalid ... resulting in an error.
 
-**Never manage `CHILD-WRAPPER` objects.***  This probably goes without
+**Never manage "child" wrapper objects.*** This probably goes without
 saying, but they're tied to the parent object, and not meant to be
 managed separately.
 
@@ -493,9 +491,74 @@ the convenience function `AUTOWRAP:BITFIELD-MASK`.
 `cl-autowrap` has a number of other features that have not been
 discussed:
 
+* Allocation
 * Enums
 * Bitmasks
 * SFFI metadata and functions
+
+### Allocation
+
+Since autowrap implements its own higher-level constructs over
+lower-level CFFI, you can't use CFFI's `FOREIGN-ALLOC` or similar
+functions and macros to easily allocate foreign records.  Thus there
+are new constructs for doing so:
+
+```lisp
+(let ((thing (autowrap:alloc 'type)))
+  :
+  (autowrap:free thing))
+```
+
+As you might expect, `ALLOC` will allocate memory of sufficient size
+for `TYPE`, and `FREE` will free it (and invalidate the wrapper for
+you).  Note that if you are doing garbage collection as above, this
+does **NOT** remove finalizers for you: you MUST take care of this
+yourself where applicable.
+
+There are also macros which will help with temporary allocation:
+
+```lisp
+(with-alloc (thing 'type)
+   :
+   :
+   )
+```
+
+This will take care of allocation and freeing within the block.  You
+should not use finalizers here.  If you try to reference the value
+outside of the scope of the block, it will be invalid.  If you wish to
+allocate multiple objects and free them, you can use the following:
+
+```lisp
+(with-many-alloc ((thing1 'type1)
+                  (thing2 'type2)
+                  :
+                   )
+  :
+  )
+```
+
+Note that while any `typedef` type aliases can be referenced simply by
+symbol as in C, record types are called `(:struct (NAME))` or `(:union
+(NAME))`, and also like C, you must write this out if there is no type
+alias for `NAME`.  For example:
+
+```c
+struct X { ... };
+typedef struct Y { ... } Y;
+
+int main() {
+    struct X foo;    /* No type alias */
+    Y bar;           /* Type alias */
+}
+```
+
+```lisp
+(with-many-alloc ((foo '(:struct (X))) ;; No type alias
+                  (bar 'Y))            ;; Type alias
+    :
+    )
+```
 
 ### Enums
 
