@@ -399,7 +399,7 @@ You may be tempted to do this:
 Unfortunately, since you invalidated `THING`, when you pass it to
 `FREE-THING`, it will be invalid ... resulting in an error.
 
-**Never manage "child" wrapper objects.*** This probably goes without
+**Never manage "child" wrapper objects.** This probably goes without
 saying, but they're tied to the parent object, and not meant to be
 managed separately.
 
