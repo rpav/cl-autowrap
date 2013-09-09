@@ -8,6 +8,7 @@
 (defvar *foreign-constant-list* nil)
 (defvar *foreign-other-exports-list* nil)
 (defvar *foreign-symbol-exceptions* nil)
+(defvar *foreign-symbol-regex* nil)
 
  ;; Collecting symbols
 
@@ -18,6 +19,14 @@
 
  ;; Types and symbols
 
+(defun apply-regexps (string regex-list)
+  (loop for r in regex-list do
+    (multiple-value-bind (match matches)
+        (ppcre:scan-to-strings (car r) string)
+      (when (and match (functionp (cdr r)))
+        (setf string (funcall (cdr r) string matches (car r))))))
+  string)
+
 (defun default-c-to-lisp (string)
   (let ((string (ppcre:regex-replace-all "([A-Z]+)([A-Z][a-z])" string "\\1_\\2")))
     (let ((string (ppcre:regex-replace-all "([a-z]+)([A-Z])" string "\\1_\\2")))
@@ -26,18 +35,21 @@
           (nstring-upcase (nsubstitute #\- #\_ string))))))
 
 (defun default-foreign-type-symbol (string type package)
-  (let ((string
-          (or (and *foreign-symbol-exceptions*
-                   (gethash string *foreign-symbol-exceptions*))
-              (default-c-to-lisp string))))
-    (if (eq #\: (aref string 0))
-        (alexandria:make-keyword (subseq string 1))
-        (cond
-          ((eq type :cconst)
-           (intern (format nil "+~A+" string) package))
-          ((eq type :cenumfield)
-           (alexandria:make-keyword string))
-          (t (intern string package))))))
+  (let ((string (if *foreign-symbol-regex*
+                    (apply-regexps string *foreign-symbol-regex*)
+                    string)))
+    (let ((string
+            (or (and *foreign-symbol-exceptions*
+                     (gethash string *foreign-symbol-exceptions*))
+                (default-c-to-lisp string))))
+      (if (eq #\: (aref string 0))
+          (alexandria:make-keyword (subseq string 1))
+          (cond
+            ((eq type :cconst)
+             (intern (format nil "+~A+" string) package))
+            ((eq type :cenumfield)
+             (alexandria:make-keyword string))
+            (t (intern string package)))))))
 
 (defun foreign-type-symbol (string type package)
   (if (string= "" string)
@@ -295,6 +307,10 @@ Return the appropriate CFFI name."))
                      (constant-package definition-package)
                      (extern-package accessor-package))
   (let ((*foreign-symbol-exceptions* (alist-hash-table symbol-exceptions :test 'equal))
+        (*foreign-symbol-regex* (mapcar (lambda (x)
+                                          (cons (apply #'ppcre:create-scanner (car x) (cadr x))
+                                                (eval (caddr x))))
+                                        symbol-regex))
         (*package* (find-package definition-package))
         (h-file (path-or-asdf (eval h-file)))
         (spec-path (path-or-asdf (eval spec-path)))
