@@ -671,11 +671,14 @@ types."
   (push `(export ',accessor ,*package*) *accessor-forms*))
 
 (defun make-child-accessor (accessor type parent ref)
-  (push `(defun ,accessor (,@(accessor-params))
-           ,*accessor-declare*
-           (,(intern (concatenate 'string "MAKE-" (foreign-type-name type))
-                     *package*) :ptr ,ref :parent ,parent))
-        *accessor-forms*)
+  (with-gensyms (v)
+    (push `(defun ,accessor (,@(accessor-params))
+             ,*accessor-declare*
+             (let ((,v (make-instance ',(foreign-type-name type))))
+               (setf (wrapper-ptr ,v) ,ref)
+               (setf (wrapper-validity ,v) ,parent)
+               ,v))
+          *accessor-forms*))
   (push `(export ',accessor ,*package*) *accessor-forms*))
 
 (defun make-normal-type-accessor (field type accessor ref)
