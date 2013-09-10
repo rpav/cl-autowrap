@@ -6,6 +6,7 @@
 (defvar *foreign-function-list* nil)
 (defvar *foreign-extern-list* nil)
 (defvar *foreign-constant-list* nil)
+(defvar *foreign-raw-constant-list* nil)
 (defvar *foreign-other-exports-list* nil)
 (defvar *foreign-symbol-exceptions* nil)
 (defvar *foreign-symbol-regex* nil)
@@ -14,7 +15,8 @@
 
 (defmacro collecting-symbols (&body body)
   `(let (*foreign-record-list* *foreign-function-list* *foreign-extern-list*
-         *foreign-constant-list* *foreign-other-exports-list* *foreign-alias-list*)
+         *foreign-constant-list* *foreign-other-exports-list* *foreign-alias-list*
+         *foreign-raw-constant-list*)
      ,@body))
 
  ;; Types and symbols
@@ -180,21 +182,22 @@ Return the appropriate CFFI name."))
                  (foreign-type-symbol name :cenum *package*))
             ,@(parse-enum-fields fields)))))
 
-(defgeneric parse-form (form tag)
+(defgeneric parse-form (form tag &key &allow-other-keys)
   (:documentation "Parse FORM tagged as TAG; specialize on (eql 'symbol)"))
 
-(defmethod parse-form :around (form tag)
+(defmethod parse-form :around (form tag &rest keys &key &allow-other-keys)
   (etypecase tag
     (symbol (call-next-method))
     (string
-     (parse-form form (if (eq #\: (aref tag 0))
-                          (make-keyword (substr* (string-upcase tag) 1))
-                          (intern (string-upcase tag) 'autowrap))))))
+     (apply #'parse-form form (if (eq #\: (aref tag 0))
+                                  (make-keyword (substr* (string-upcase tag) 1))
+                                  (intern (string-upcase tag) 'autowrap))
+            keys))))
 
-(defmethod parse-form (form tag)
+(defmethod parse-form (form tag &key &allow-other-keys)
   (warn "Unhandled form: ~S for input:~%  ~S" tag form))
 
-(defmethod parse-form (form (tag (eql 'typedef)))
+(defmethod parse-form (form (tag (eql 'typedef)) &key constant-accessor intern-constants)
   (alist-bind (name type) form
     (let ((sym (foreign-type-symbol name :ctype *package*)))
       (if (pointer*-to-record-form-p type)
@@ -236,7 +239,7 @@ Return the appropriate CFFI name."))
         collect `(defconstant ,sym ,(aval :value field))
         do (pushnew sym *foreign-constant-list*)))
 
-(defmethod parse-form (form (tag (eql 'struct)))
+(defmethod parse-form (form (tag (eql 'struct)) &key &allow-other-keys)
   (alist-bind (name fields) form
     (let ((sym (foreign-type-symbol name :cstruct *package*)))
       (let ((cstruct-fields (parse-fields fields)))
@@ -248,7 +251,7 @@ Return the appropriate CFFI name."))
            ,(aval :bit-alignment form)
            ',cstruct-fields)))))
 
-(defmethod parse-form (form (tag (eql 'union)))
+(defmethod parse-form (form (tag (eql 'union)) &key &allow-other-keys)
   (alist-bind (name fields) form
     (let ((sym (foreign-type-symbol name :cunion *package*)))
       (let ((cunion-fields (parse-fields fields)))
@@ -260,7 +263,7 @@ Return the appropriate CFFI name."))
            ,(aval :bit-alignment form)
            ',cunion-fields)))))
 
-(defmethod parse-form (form (tag (eql 'enum)))
+(defmethod parse-form (form (tag (eql 'enum)) &key &allow-other-keys)
   (alist-bind (name id fields) form
     (let ((sym (foreign-type-symbol name :cenum *package*)))
       (when (symbol-package sym)
@@ -269,7 +272,7 @@ Return the appropriate CFFI name."))
          ,@(parse-enum-to-const fields)
          (define-foreign-enum ',sym ,id ',(parse-enum-fields fields))))))
 
-(defmethod parse-form (form (tag (eql 'function)))
+(defmethod parse-form (form (tag (eql 'function)) &key &allow-other-keys)
   (alist-bind (name parameters return-type variadic) form
     (let ((sym (foreign-type-symbol name :cfun *package*)))
       (let ((cfun-fields (parse-fields parameters :cparam)))
@@ -279,15 +282,16 @@ Return the appropriate CFFI name."))
              ',@(parse-type return-type (aval :tag return-type))
            ',cfun-fields)))))
 
-(defmethod parse-form (form (tag (eql 'const)))
+(defmethod parse-form (form (tag (eql 'const)) &key intern-constants &allow-other-keys)
   (alist-bind (name value) form
-    (let ((sym (foreign-type-symbol name :cconst *package*)))
-      (pushnew sym *foreign-constant-list*)
-      (if (stringp value)
-          `(defvar ,sym ,value)
-          `(defconstant ,sym ,value)))))
+    (when intern-constants
+      (let ((sym (foreign-type-symbol name :cconst *package*)))
+        (pushnew sym *foreign-constant-list*)
+        (if (stringp value)
+            `(defvar ,sym ,value)
+            `(defconstant ,sym ,value))))))
 
-(defmethod parse-form (form (tag (eql 'extern)))
+(defmethod parse-form (form (tag (eql 'extern)) &key &allow-other-keys)
   (alist-bind (name type) form
     (let ((sym (foreign-type-symbol name :cextern *package*)))
       (push sym *foreign-extern-list*)
@@ -305,7 +309,9 @@ Return the appropriate CFFI name."))
                      (wrapper-package definition-package)
                      (accessor-package wrapper-package)
                      (constant-package definition-package)
-                     (extern-package accessor-package))
+                     (extern-package accessor-package)
+                     (intern-constants t)
+                     constant-accessor)
   (let ((*foreign-symbol-exceptions* (alist-hash-table symbol-exceptions :test 'equal))
         (*foreign-symbol-regex* (mapcar (lambda (x)
                                           (cons (apply #'ppcre:create-scanner (car x) (cadr x))
@@ -320,7 +326,9 @@ Return the appropriate CFFI name."))
         (wrapper-package (find-package wrapper-package))
         (accessor-package (find-package accessor-package))
         (constant-package (find-package constant-package))
-        (extern-package (find-package extern-package)))
+        (extern-package (find-package extern-package))
+        (constant-name-value-map (gensym "CONSTANT-NAME-VALUE-MAP"))
+        (constant-accessor-internal (gensym)))
     (multiple-value-bind (h-name m-name)
         (ensure-local-spec h-file
                            :spec-path spec-path
@@ -330,6 +338,20 @@ Return the appropriate CFFI name."))
         (with-open-file (in-m m-name)
           (collecting-symbols
             `(eval-when (:compile-toplevel :load-toplevel :execute)
+               ,@(when constant-accessor
+                       `((defvar ,constant-name-value-map)
+                         (defun ,constant-accessor-internal (name)
+                           (declare (string name))
+                           (multiple-value-bind (value presentp) (gethash name ,constant-name-value-map)
+                             (if presentp
+                                 value
+                                 (error "~@<Unknown constant: ~S~%~:@>" name))))
+                         (defun ,constant-accessor (name)
+                           (,constant-accessor-internal name))
+                         ;; I wonder if we really must break this loop..
+                         (define-compiler-macro ,constant-accessor (name)
+                           (,constant-accessor-internal name))
+                         (export '(,constant-accessor))))
                #-sbcl
                (with-anonymous-indexing
                  ,@(loop for form in (json:decode-json in-h)
@@ -337,7 +359,10 @@ Return the appropriate CFFI name."))
                                     (excluded-p (aval :location form) exclude-sources))
                            collect (parse-form form (aval :tag form)))
                  ,@(loop for form in (json:decode-json in-m)
-                         collect (parse-form form (aval :tag form))))
+                         do (alist-bind (name value) form
+                              (push (cons name value) *foreign-raw-constant-list*))
+                         collect (parse-form form (aval :tag form)
+                                             :intern-constants intern-constants)))
                #+sbcl
                (progn
                  (setf *foreign-record-index* (make-hash-table))
@@ -347,8 +372,16 @@ Return the appropriate CFFI name."))
                                          (not (included-p (aval :location form) include-sources))))
                            collect (parse-form form (aval :tag form)))
                  ,@(loop for form in (json:decode-json in-m)
-                         collect (parse-form form (aval :tag form)))
+                         do (alist-bind (name value) form
+                              (push (cons name value) *foreign-raw-constant-list*))
+                         collect (parse-form form (aval :tag form)
+                                             :intern-constants intern-constants))
                  (setf *foreign-record-index* nil))
+               ,@(when constant-accessor
+                       `((setf ,constant-name-value-map (make-hash-table :test 'equal :size ,(length *foreign-constant-list*)))
+                         (loop :for (name . value)  :in ',*foreign-raw-constant-list*
+                            :do
+                            (setf (gethash name ,constant-name-value-map) value))))
                ,@(loop for record in (reverse *foreign-record-list*)
                        collect `(define-wrapper ,record ,wrapper-package))
                ,@(loop for alias in (reverse *foreign-alias-list*)
@@ -361,7 +394,7 @@ Return the appropriate CFFI name."))
                        collect `(define-cextern ,symbol ,extern-package))
                ,(when *foreign-record-list*
                   `(export '(,@(mapcar (lambda (x) (etypecase x (symbol x) (cons (caadr x))))
-                                *foreign-record-list*))))
+                                       *foreign-record-list*))))
                ,(when *foreign-function-list*
                   `(export ',(mapcar (lambda (x) (intern (symbol-name x) function-package))
                                      *foreign-function-list*)
@@ -369,7 +402,8 @@ Return the appropriate CFFI name."))
                ,(when *foreign-extern-list*
                   `(export ',(mapcar (lambda (x) (intern (symbol-name x) extern-package))
                                      *foreign-extern-list*) ,extern-package))
-               ,(when *foreign-constant-list*
+               ,(when (and *foreign-constant-list*
+                       intern-constants)
                   `(export ',(mapcar (lambda (x) (intern (symbol-name x) constant-package))
                                      *foreign-constant-list*) ,constant-package))
                ,(when *foreign-other-exports-list*
