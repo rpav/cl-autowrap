@@ -365,7 +365,7 @@ Return the appropriate CFFI name."))
                  ,@(loop for form in (json:decode-json in-m)
                          do (alist-bind (name value) form
                               (push (cons name value) *foreign-raw-constant-list*))
-                         unless (excluded-p (aval :name form) exclude-constants)
+                         unless (included-p (aval :name form) exclude-constants)
                            collect (parse-form form (aval :tag form))))
                #+sbcl
                (progn
