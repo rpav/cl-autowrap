@@ -349,8 +349,10 @@ Return the appropriate CFFI name."))
                          (defun ,constant-accessor (name)
                            (,constant-accessor-internal name))
                          ;; I wonder if we really must break this loop..
-                         (define-compiler-macro ,constant-accessor (name)
-                           (,constant-accessor-internal name))
+                         (define-compiler-macro ,constant-accessor (&whole whole name)
+                           (if (stringp name)
+                               (,constant-accessor-internal name)
+                               whole))
                          (export '(,constant-accessor))))
                #-sbcl
                (with-anonymous-indexing
