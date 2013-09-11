@@ -197,7 +197,7 @@ Return the appropriate CFFI name."))
 (defmethod parse-form (form tag &key &allow-other-keys)
   (warn "Unhandled form: ~S for input:~%  ~S" tag form))
 
-(defmethod parse-form (form (tag (eql 'typedef)) &key constant-accessor intern-constants)
+(defmethod parse-form (form (tag (eql 'typedef)) &key &allow-other-keys)
   (alist-bind (name type) form
     (let ((sym (foreign-type-symbol name :ctype *package*)))
       (if (pointer*-to-record-form-p type)
@@ -282,14 +282,13 @@ Return the appropriate CFFI name."))
              ',@(parse-type return-type (aval :tag return-type))
            ',cfun-fields)))))
 
-(defmethod parse-form (form (tag (eql 'const)) &key intern-constants &allow-other-keys)
+(defmethod parse-form (form (tag (eql 'const)) &key &allow-other-keys)
   (alist-bind (name value) form
-    (when intern-constants
-      (let ((sym (foreign-type-symbol name :cconst *package*)))
-        (pushnew sym *foreign-constant-list*)
-        (if (stringp value)
-            `(defvar ,sym ,value)
-            `(defconstant ,sym ,value))))))
+    (let ((sym (foreign-type-symbol name :cconst *package*)))
+      (pushnew sym *foreign-constant-list*)
+      (if (stringp value)
+          `(defvar ,sym ,value)
+          `(defconstant ,sym ,value)))))
 
 (defmethod parse-form (form (tag (eql 'extern)) &key &allow-other-keys)
   (alist-bind (name type) form
@@ -310,7 +309,7 @@ Return the appropriate CFFI name."))
                      (accessor-package wrapper-package)
                      (constant-package definition-package)
                      (extern-package accessor-package)
-                     (intern-constants t)
+                     exclude-constants
                      constant-accessor)
   (let ((*foreign-symbol-exceptions* (alist-hash-table symbol-exceptions :test 'equal))
         (*foreign-symbol-regex* (mapcar (lambda (x)
@@ -363,8 +362,8 @@ Return the appropriate CFFI name."))
                  ,@(loop for form in (json:decode-json in-m)
                          do (alist-bind (name value) form
                               (push (cons name value) *foreign-raw-constant-list*))
-                         collect (parse-form form (aval :tag form)
-                                             :intern-constants intern-constants)))
+                         unless (excluded-p (aval :name form) exclude-constants)
+                           collect (parse-form form (aval :tag form))))
                #+sbcl
                (progn
                  (setf *foreign-record-index* (make-hash-table))
@@ -376,8 +375,8 @@ Return the appropriate CFFI name."))
                  ,@(loop for form in (json:decode-json in-m)
                          do (alist-bind (name value) form
                               (push (cons name value) *foreign-raw-constant-list*))
-                         collect (parse-form form (aval :tag form)
-                                             :intern-constants intern-constants))
+                         unless (included-p (aval :name form) exclude-constants)
+                           collect (parse-form form (aval :tag form)))
                  (setf *foreign-record-index* nil))
                ,@(when constant-accessor
                        `((setf ,constant-name-value-map (make-hash-table :test 'equal :size ,(length *foreign-constant-list*)))
@@ -404,8 +403,7 @@ Return the appropriate CFFI name."))
                ,(when *foreign-extern-list*
                   `(export ',(mapcar (lambda (x) (intern (symbol-name x) extern-package))
                                      *foreign-extern-list*) ,extern-package))
-               ,(when (and *foreign-constant-list*
-                       intern-constants)
+               ,(when *foreign-constant-list*
                   `(export ',(mapcar (lambda (x) (intern (symbol-name x) constant-package))
                                      *foreign-constant-list*) ,constant-package))
                ,(when *foreign-other-exports-list*

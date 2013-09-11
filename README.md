@@ -241,13 +241,13 @@ necessary.
 
 Alternatively, as was actually decided for the above clutter case,
 since there was "no rhyme or reason" to the naming scheme of the
-\#define'd constants, one may skip interning constant names altogether,
+\#define'd constants, one may filter constant names to be interned,
 opting, instead, for referencing them through a separate constant-accessor
 macro:
 
 ```lisp
 (c-include "file.h"
-            :intern-constants cl:nil
+            :exclude-constants (".*")
             :constant-accessor clutter-constant)
 ;; Access constants like this:
 (clutter-constant "CLUTTER_Z")
