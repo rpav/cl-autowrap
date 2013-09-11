@@ -381,9 +381,9 @@ Return the appropriate CFFI name."))
                  (setf *foreign-record-index* nil))
                ,@(when constant-accessor
                        `((setf ,constant-name-value-map (make-hash-table :test 'equal :size ,(length *foreign-constant-list*)))
-                         (loop :for (name . value)  :in ',*foreign-raw-constant-list*
-                            :do
-                            (setf (gethash name ,constant-name-value-map) value))))
+                         (loop for (name . value) in ',*foreign-raw-constant-list*
+                               do
+                               (setf (gethash name ,constant-name-value-map) value))))
                ,@(loop for record in (reverse *foreign-record-list*)
                        collect `(define-wrapper ,record ,wrapper-package))
                ,@(loop for alias in (reverse *foreign-alias-list*)
