@@ -356,8 +356,8 @@ Return the appropriate CFFI name."))
                #-sbcl
                (with-anonymous-indexing
                  ,@(loop for form in (json:decode-json in-h)
-                         unless (or (excluded-p (aval :name form) exclude-definitions)
-                                    (excluded-p (aval :location form) exclude-sources))
+                         unless (or (included-p (aval :name form) exclude-definitions)
+                                    (included-p (aval :location form) exclude-sources))
                            collect (parse-form form (aval :tag form)))
                  ,@(loop for form in (json:decode-json in-m)
                          do (alist-bind (name value) form
