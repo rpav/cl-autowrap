@@ -779,11 +779,10 @@ types."
 Freeing is up to you!"
   (etypecase type
     (keyword (alloc-ptr type count))
-    (symbol
-     (let ((wrapper (make-instance (foreign-type-name (find-type type)))))
-       (setf (wrapper-ptr wrapper)
-             (alloc-ptr type count))
-       wrapper))))
+    (t (let ((wrapper (make-instance (foreign-type-name (find-type type)))))
+         (setf (wrapper-ptr wrapper)
+               (alloc-ptr type count))
+         wrapper))))
 
 (defun free (object)
   "Free WRAPPER via FOREIGN-FREE and invalidate."
@@ -803,5 +802,43 @@ Freeing is up to you!"
      (unwind-protect (progn ,@body)
        ,@(mapcar #'(lambda (bind) `(free ,(car bind))) bindings))))
 
-(defun ptr[] (wrapper index)
-  )
+(defun c-aptr (wrapper index &optional (type (foreign-type-name wrapper)))
+  (let ((size (foreign-type-size (find-type type))))
+    (cffi-sys:inc-pointer (ptr wrapper) (* index size))))
+
+(defun c-aref (wrapper index &optional (type (foreign-type-name wrapper)))
+  (etypecase type
+    (keyword
+     (cffi-sys:%mem-ref (c-aptr wrapper index type) type))
+    (t (wrap-pointer (c-aptr wrapper index type) type wrapper))))
+
+(define-compiler-macro c-aptr (&whole whole wrapper index
+                                     &optional (type (foreign-type-name wrapper)))
+  (if (constantp type)
+      (let ((size (foreign-type-size (find-type (eval type)))))
+        `(cffi-sys:inc-pointer (ptr ,wrapper) (* ,index ,size)))
+      whole))
+
+(define-compiler-macro c-aref (&whole whole wrapper index
+                                      &optional (type (foreign-type-name wrapper)))
+  (if (constantp type)
+      (etypecase (eval type)
+        (keyword
+         `(cffi-sys:%mem-ref (c-aptr ,wrapper ,index ,type) ,type))
+        (t `(once-only (wrapper index)
+              (wrap-pointer (c-aptr ,wrapper ,index ,type) ,type ,wrapper))))
+      whole))
+
+(defun (setf c-aref) (v ptr index type)
+  (etypecase type
+    (keyword
+     (cffi-sys:%mem-set v (c-aptr ptr index type) type)
+     v)))
+
+(define-compiler-macro (setf c-aref) (&whole whole v ptr index type)
+  (if (constantp type)
+      (etypecase (eval type)
+        (keyword `(once-only (v)
+                    (cffi-sys:%mem-set ,v (c-aptr ,ptr ,index ,type) ,type)
+                    ,v)))
+      whole))

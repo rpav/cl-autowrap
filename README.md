@@ -623,6 +623,66 @@ int main() {
     )
 ```
 
+### Arrays
+
+In addition to single objects, autowrap also allows allocation and
+reference to arrays of objects.  **This is less safe, however**: there
+are no provisions for bounds-checking, since the data is simply not
+there.  (While in theory, we could add size data on the lisp side,
+this is a false sense of security, since you will often be dealing
+arrays from C.)
+
+Allocation methods all take an optional `COUNT` parameter:
+
+```lisp
+(alloc x 'type 3)
+
+(with-alloc (x 'type 5) ...)
+
+(with-many-alloc ((x 'type 5)
+                  (y 'type 2))
+  ...)
+```
+
+To reference these, you can use `C-APTR` and `C-AREF`:
+
+```lisp
+(c-aptr x 1) ;; => raw pointer
+(c-aref y 2) ;; => wrapper
+```
+
+Unfortunately, this may present some performance issues, since
+*unlike* record accessors, the type must be looked up at runtime.  In
+theory, autowrap could generate array accessors for all types, but
+this would vastly increase the number of accessors generated with
+little value, since most will not be used.
+
+Instead, you may specify the type explicitly:
+
+```lisp
+(c-aptr x 1 'type) ;; => pointer
+(c-aptr y 2 'type) ;; => wrapper
+```
+
+In this case, as long as `'type` is `constant-p`, the compiler macro
+should expand it at compile-time.
+
+Basic C types (e.g., `:int`, `:char`, etc) are also supported; in this
+case, a wrapper is not returned, but the value itself:
+
+```lisp
+(c-aref x 1 :int) ;; => number
+```
+
+You can also set array members *for basic types only*:
+
+```lisp
+(setf (c-aref x 1 :int) 10)
+```
+
+In both of these cases, since autowrap does not provide additional
+wrappers for basic types, you *must* specify the type explicitly.
+
 ### Enums
 
 Enums are imported and created as types, but they're typically used by

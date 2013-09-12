@@ -10,6 +10,7 @@
    ;; Functions
    #:make-wrapper #:wrapped-ptr #:wrapper-valid-p
    #:ptr #:valid-p #:invalidate
+   #:wrap-pointer
 
    #:parse #:parse-file
 
@@ -42,6 +43,7 @@
    #:define-accessors #:define-wrapper
 
    #:alloc-ptr #:alloc #:free #:with-alloc #:with-many-alloc
+   #:c-aptr #:c-aref
 
    ;; Bitmasks
    #:define-bitmask #:find-bitmask #:remove-bitmask #:mask-symbol-value

@@ -44,3 +44,9 @@
 (defmethod print-object ((object wrapper) stream)
   (print-unreadable-object (object stream :type t :identity nil)
     (format stream "{#X~8,'0X}" (cffi:pointer-address (wrapper-ptr object)))))
+
+(defun wrap-pointer (pointer type &optional (validity t))
+  (let ((child (make-instance type)))
+    (setf (wrapper-ptr child) pointer)
+    (setf (wrapper-validity child) validity)
+    child))
