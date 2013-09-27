@@ -852,7 +852,7 @@ aliases to be specified."
     ,name ,(basic-foreign-type return-type)
     ,(mapcar #'car lambda-list)
     ,(mapcar (lambda (x) (basic-foreign-type (cadr x))) lambda-list)
-    ,@body
+    (progn ,@body)
     :convention :cdecl))
 
 (defmacro callback (name)
