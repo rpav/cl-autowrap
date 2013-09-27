@@ -45,6 +45,8 @@
    #:alloc-ptr #:alloc #:free #:with-alloc #:with-many-alloc
    #:c-aptr #:c-aref
 
+   #:defcallback #:callback
+
    ;; Bitmasks
    #:define-bitmask #:find-bitmask #:remove-bitmask #:mask-symbol-value
    #:mask #:mask-apply #:mask-keywords
@@ -62,6 +64,6 @@
    :autowrap
 
    #:ptr #:invalidate #:enum-value #:enum-key #:mask #:mask-apply #:mask-keywords
-   #:alloc-ptr #:alloc #:free #:with-alloc #:with-many-alloc)
+   #:alloc-ptr #:alloc #:free #:with-alloc #:with-many-alloc #:defcallback #:callback)
   (:export #:ptr #:invalidate #:enum-value #:enum-key #:mask #:mask-apply #:mask-keywords
-           #:alloc-ptr #:alloc #:with-alloc #:with-many-alloc))
+           #:alloc-ptr #:alloc #:with-alloc #:with-many-alloc #:defcallback #:callback))

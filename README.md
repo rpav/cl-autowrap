@@ -322,8 +322,6 @@ However, you cannot use CFFI constructs from another wrapper directly
 with SFFI-defined functions, or vice versa, but you can always use
 pointers between the two.
 
-Callbacks via `cffi:defcallback` should work normally.
-
 ### Functions
 
 `cl-autowrap` defines *macros* which wrap C calls with a few helpful
@@ -557,6 +555,7 @@ discussed:
 * Allocation
 * Enums
 * Bitmasks
+* Callbacks
 * SFFI metadata and functions
 
 ### Allocation
@@ -761,6 +760,30 @@ This essentially expands to the following:
         `(:bar . ,+some-bar+)
         `(:baz . ,+some-baz+)))
 ```
+
+### Callbacks
+
+Autowrap now provides a thin layer on top of `CFFI-SYS:%DEFCALLBACK`:
+
+```lisp
+(autowrap:defcallback NAME RETURN-TYPE
+    ((PARAM TYPE)
+     ...)
+  ...)
+```
+
+The main difference is that you may specify SFFI type aliases as
+parameters, since these are not available to the higher-level
+`CFFI:DEFCALLBACK`.
+
+Additionally, there is the following:
+
+```lisp
+(autowrap:callback 'name)
+```
+
+This simply expands to `CFFI-SYS:%CALLBACK`, but is provided for
+convenience.
 
 ### SFFI Metadata and Functions
 

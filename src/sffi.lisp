@@ -842,3 +842,18 @@ Freeing is up to you!"
                     (cffi-sys:%mem-set ,v (c-aptr ,ptr ,index ,type) ,type)
                     ,v)))
       whole))
+
+ ;; Callbacks
+
+(defmacro defcallback (name return-type lambda-list &body body)
+  "This acts much like CFFI:DEFCALLBACK except it allows SFFI type
+aliases to be specified."
+  `(cffi-sys:%defcallback
+    ,name ,(basic-foreign-type return-type)
+    ,(mapcar #'car lambda-list)
+    ,(mapcar (lambda (x) (basic-foreign-type (cadr x))) lambda-list)
+    ,@body
+    :convention :cdecl))
+
+(defmacro callback (name)
+  `(cffi-sys:%callback ,name))
