@@ -596,7 +596,8 @@ types."
     `(cffi-sys:inc-pointer ,ref ,(if (= size 1) index `(* ,size ,index)))))
 
 (defun make-field-deref (field ref)
-  (let* ((type (basic-foreign-type (foreign-type field))))
+  (let* ((type (or (basic-foreign-type (foreign-type field))
+                   (error "~@<Dereferencing a field of unknown type: ~S.~:@>" field))))
     `(cffi-sys:%mem-ref ,ref ,type)))
 
 (defun make-field-setter (field ref value)
