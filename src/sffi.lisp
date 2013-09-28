@@ -852,7 +852,7 @@ aliases to be specified."
   `(cffi-sys:%defcallback
     ,name ,(basic-foreign-type return-type)
     ,(mapcar #'car lambda-list)
-    ,(mapcar (lambda (x) (basic-foreign-type (cadr x))) lambda-list)
+    ,(mapcar (lambda (x) (basic-foreign-type (ensure-type (cadr x)))) lambda-list)
     (progn ,@body)
     :convention :cdecl))
 
