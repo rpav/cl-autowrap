@@ -340,6 +340,7 @@ Return the appropriate CFFI name."))
         (with-open-file (in-m m-name)
           (collecting-symbols
             `(eval-when (:compile-toplevel :load-toplevel :execute)
+               (setf *failed-wraps* nil)
                ,@(when constant-accessor
                        `((defvar ,constant-name-value-map)
                          (defun ,constant-accessor-internal (name)
@@ -410,4 +411,5 @@ Return the appropriate CFFI name."))
                   `(export ',(mapcar (lambda (x) (intern (symbol-name x) constant-package))
                                      *foreign-constant-list*) ,constant-package))
                ,(when *foreign-other-exports-list*
-                  `(export ',*foreign-other-exports-list* ,definition-package)))))))))
+                  `(export ',*foreign-other-exports-list* ,definition-package))
+               (report-wrap-failures 'compile-time *standard-output*))))))))
