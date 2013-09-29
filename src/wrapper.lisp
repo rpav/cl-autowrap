@@ -5,12 +5,6 @@
 
  ;; Wrappers
 
-(define-condition invalid-wrapper (error)
-  ((object :initarg :object :initform nil :accessor invalid-pointer-object))
-  (:report (lambda (c s)
-             (with-slots (object) c
-               (format s "Error: Invalid/Destroyed Foreign Object: ~A" object)))))
-
 (declaim (inline make-wrapper wrapper-ptr))
 (defstruct wrapper
   #+(or cmucl ecl sbcl clisp)

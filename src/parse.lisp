@@ -339,75 +339,80 @@ Return the appropriate CFFI name."))
       (with-open-file (in-h h-name)
         (with-open-file (in-m m-name)
           (collecting-symbols
-            `(eval-when (:compile-toplevel :load-toplevel :execute)
-               ,@(when constant-accessor
-                       `((defvar ,constant-name-value-map)
-                         (defun ,constant-accessor-internal (name)
-                           (declare (string name))
-                           (multiple-value-bind (value presentp) (gethash name ,constant-name-value-map)
-                             (if presentp
-                                 value
-                                 (error "~@<Unknown constant: ~S~%~:@>" name))))
-                         (defun ,constant-accessor (name)
-                           (,constant-accessor-internal name))
-                         ;; I wonder if we really must break this loop..
-                         (define-compiler-macro ,constant-accessor (&whole whole name)
-                           (if (stringp name)
-                               (,constant-accessor-internal name)
-                               whole))
-                         (export '(,constant-accessor))))
-               #-sbcl
-               (with-anonymous-indexing
-                 ,@(loop for form in (json:decode-json in-h)
-                         unless (or (included-p (aval :name form) exclude-definitions)
-                                    (included-p (aval :location form) exclude-sources))
-                           collect (parse-form form (aval :tag form)))
-                 ,@(loop for form in (json:decode-json in-m)
-                         do (alist-bind (name value) form
-                              (push (cons name value) *foreign-raw-constant-list*))
-                         unless (included-p (aval :name form) exclude-constants)
-                           collect (parse-form form (aval :tag form))))
-               #+sbcl
-               (progn
-                 (setf *foreign-record-index* (make-hash-table))
-                 ,@(loop for form in (json:decode-json in-h)
-                         unless (or (included-p (aval :name form) exclude-definitions)
-                                    (and (included-p (aval :location form) exclude-sources)
-                                         (not (included-p (aval :location form) include-sources))))
-                           collect (parse-form form (aval :tag form)))
-                 ,@(loop for form in (json:decode-json in-m)
-                         do (alist-bind (name value) form
-                              (push (cons name value) *foreign-raw-constant-list*))
-                         unless (included-p (aval :name form) exclude-constants)
-                           collect (parse-form form (aval :tag form)))
-                 (setf *foreign-record-index* nil))
-               ,@(when constant-accessor
-                       `((setf ,constant-name-value-map (make-hash-table :test 'equal :size ,(length *foreign-constant-list*)))
-                         (loop for (name . value) in ',*foreign-raw-constant-list*
-                               do
-                               (setf (gethash name ,constant-name-value-map) value))))
-               ,@(loop for record in (reverse *foreign-record-list*)
-                       collect `(define-wrapper ,record ,wrapper-package))
-               ,@(loop for alias in (reverse *foreign-alias-list*)
-                       collect `(define-wrapper ,alias ,wrapper-package))
-               ,@(loop for record in (reverse *foreign-record-list*)
-                       collect `(define-accessors ,record ,accessor-package))
-               ,@(loop for symbol in (reverse *foreign-function-list*)
-                       collect `(define-cfun ,symbol ,function-package))
-               ,@(loop for symbol in (reverse *foreign-extern-list*)
-                       collect `(define-cextern ,symbol ,extern-package))
-               ,(when *foreign-record-list*
-                  `(export '(,@(mapcar (lambda (x) (etypecase x (symbol x) (cons (caadr x))))
-                                       *foreign-record-list*))))
-               ,(when *foreign-function-list*
-                  `(export ',(mapcar (lambda (x) (intern (symbol-name x) function-package))
-                                     *foreign-function-list*)
-                           ,function-package))
-               ,(when *foreign-extern-list*
-                  `(export ',(mapcar (lambda (x) (intern (symbol-name x) extern-package))
-                                     *foreign-extern-list*) ,extern-package))
-               ,(when *foreign-constant-list*
-                  `(export ',(mapcar (lambda (x) (intern (symbol-name x) constant-package))
-                                     *foreign-constant-list*) ,constant-package))
-               ,(when *foreign-other-exports-list*
-                  `(export ',*foreign-other-exports-list* ,definition-package)))))))))
+            `(progn
+               (eval-when (:compile-toplevel :load-toplevel :execute)
+                 (setf *failed-wraps* nil)
+                 ,@(when constant-accessor
+                         `((defvar ,constant-name-value-map)
+                           (defun ,constant-accessor-internal (name)
+                             (declare (string name))
+                             (multiple-value-bind (value presentp) (gethash name ,constant-name-value-map)
+                               (if presentp
+                                   value
+                                   (error "~@<Unknown constant: ~S~%~:@>" name))))
+                           (defun ,constant-accessor (name)
+                             (,constant-accessor-internal name))
+                           ;; I wonder if we really must break this loop..
+                           (define-compiler-macro ,constant-accessor (&whole whole name)
+                             (if (stringp name)
+                                 (,constant-accessor-internal name)
+                                 whole))
+                           (export '(,constant-accessor))))
+                 #-sbcl
+                 (with-anonymous-indexing
+                   ,@(loop for form in (json:decode-json in-h)
+                           unless (or (included-p (aval :name form) exclude-definitions)
+                                      (included-p (aval :location form) exclude-sources))
+                             collect (parse-form form (aval :tag form)))
+                   ,@(loop for form in (json:decode-json in-m)
+                           do (alist-bind (name value) form
+                                (push (cons name value) *foreign-raw-constant-list*))
+                           unless (included-p (aval :name form) exclude-constants)
+                             collect (parse-form form (aval :tag form))))
+                 #+sbcl
+                 (progn
+                   (setf *foreign-record-index* (make-hash-table))
+                   ,@(loop for form in (json:decode-json in-h)
+                           unless (or (included-p (aval :name form) exclude-definitions)
+                                      (and (included-p (aval :location form) exclude-sources)
+                                           (not (included-p (aval :location form) include-sources))))
+                             collect (parse-form form (aval :tag form)))
+                   ,@(loop for form in (json:decode-json in-m)
+                           do (alist-bind (name value) form
+                                (push (cons name value) *foreign-raw-constant-list*))
+                           unless (included-p (aval :name form) exclude-constants)
+                             collect (parse-form form (aval :tag form)))
+                   (setf *foreign-record-index* nil))
+                 ,@(when constant-accessor
+                         `((setf ,constant-name-value-map (make-hash-table :test 'equal :size ,(length *foreign-constant-list*)))
+                           (loop for (name . value) in ',*foreign-raw-constant-list*
+                                 do
+                                 (setf (gethash name ,constant-name-value-map) value))))
+                 ,@(loop for record in (reverse *foreign-record-list*)
+                         collect `(define-wrapper ,record ,wrapper-package))
+                 ,@(loop for alias in (reverse *foreign-alias-list*)
+                         collect `(define-wrapper ,alias ,wrapper-package))
+                 ,@(loop for record in (reverse *foreign-record-list*)
+                         collect `(define-accessors ,record ,accessor-package))
+                 ,@(loop for symbol in (reverse *foreign-function-list*)
+                         collect `(define-cfun ,symbol ,function-package))
+                 ,@(loop for symbol in (reverse *foreign-extern-list*)
+                         collect `(define-cextern ,symbol ,extern-package))
+                 (compile-time-report-wrap-failures)
+                 ,(when *foreign-record-list*
+                    `(export '(,@(mapcar (lambda (x) (etypecase x (symbol x) (cons (caadr x))))
+                                         *foreign-record-list*))))
+                 ,(when *foreign-function-list*
+                    `(export ',(mapcar (lambda (x) (intern (symbol-name x) function-package))
+                                       *foreign-function-list*)
+                             ,function-package))
+                 ,(when *foreign-extern-list*
+                    `(export ',(mapcar (lambda (x) (intern (symbol-name x) extern-package))
+                                       *foreign-extern-list*) ,extern-package))
+                 ,(when *foreign-constant-list*
+                    `(export ',(mapcar (lambda (x) (intern (symbol-name x) constant-package))
+                                       *foreign-constant-list*) ,constant-package))
+                 ,(when *foreign-other-exports-list*
+                    `(export ',*foreign-other-exports-list* ,definition-package)))
+               (eval-when (:load-toplevel :execute)
+                 (report-wrap-failures 'load-time *standard-output*)))))))))

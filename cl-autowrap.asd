@@ -17,6 +17,7 @@
   :components
   ((:file "package")
    (:file "util")
+   (:file "conditions")
    (:file "c2ffi")
    (:file "sffi")
    (:file "wrapper")
