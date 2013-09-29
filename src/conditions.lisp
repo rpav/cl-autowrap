@@ -47,10 +47,14 @@
   (if *failed-wraps*
       (format stream ":~%~@<;   ~@;~{~A ~}~:@>~%" (sort (copy-list *failed-wraps*) #'string<))
       (terpri stream))
-  (format stream "; Total of ~D ~(~A~) missing entities" (length *wrap-failers*) kind)
-  (if *wrap-failers*
-      (format stream ":~%~@<;   ~@;~{~A ~}~:@>~%" (delete-duplicates (sort (mapcar #'prin1-to-string *wrap-failers*) #'string<) :test #'string=))
-      (terpri stream)))
+  (let ((unique-failers (delete-duplicates (sort (mapcar #'prin1-to-string *wrap-failers*) #'string<) :test #'string=)))
+    (format stream "; Total of ~D ~(~A~) missing entities" (length unique-failers) kind)
+    (if unique-failers
+        (format stream ":~%~@<;   ~@;~{~A ~}~:@>~%" unique-failers)
+        (terpri stream))))
+
+(defmacro compile-time-report-wrap-failures ()
+  (report-wrap-failures 'compile-time *error-output*))
 
 (defun call-with-wrap-attempt (wrappable-name fn format-control format-args)
   (handler-case (funcall fn)

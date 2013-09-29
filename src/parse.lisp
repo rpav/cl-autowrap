@@ -397,6 +397,7 @@ Return the appropriate CFFI name."))
                        collect `(define-cfun ,symbol ,function-package))
                ,@(loop for symbol in (reverse *foreign-extern-list*)
                        collect `(define-cextern ,symbol ,extern-package))
+               (compile-time-report-wrap-failures)
                ,(when *foreign-record-list*
                   `(export '(,@(mapcar (lambda (x) (etypecase x (symbol x) (cons (caadr x))))
                                        *foreign-record-list*))))
