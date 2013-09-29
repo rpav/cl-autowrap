@@ -1,3 +1,6 @@
+\#*
+.\#*
+*~
 *.fasl
 *.so
 example/example.lisp
