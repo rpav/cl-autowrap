@@ -85,13 +85,16 @@
       (gethash typespec *foreign-types*)))
 
 (defun undefined-enum-value (value)
+  (push `(:enum ,value) *wrap-failers*)
   (autowrap-continuable-error "Undefined enum value: ~S" value))
 
 (defun %undefined-type-error-no-context (typespec)
+  (push typespec *wrap-failers*)
   (error 'undefined-foreign-type
          :typespec typespec))
 
 (defun %undefined-type-error (typespec context-format-control context-format-arguments)
+  (push typespec *wrap-failers*)
   (error 'undefined-foreign-type-contextualised
          :typespec typespec
          :context-format-control context-format-control

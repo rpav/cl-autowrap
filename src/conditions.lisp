@@ -36,12 +36,20 @@
 
  ;; Tooling
 
-(defvar *failed-wraps* nil)
+(defvar *failed-wraps* nil
+  "A list of things we couldn't wrap.")
+
+(defvar *wrap-failers* nil
+  "A list of things whose absence caused other things to fail to wrap.")
 
 (defun report-wrap-failures (kind stream)
-  (format stream "; Total of ~D ~A wrap failures" (length *failed-wraps*) kind)
+  (format stream "; Total of ~D ~(~A~) wrap failures" (length *failed-wraps*) kind)
   (if *failed-wraps*
       (format stream ":~%~@<;   ~@;~{~A ~}~:@>~%" (sort (copy-list *failed-wraps*) #'string<))
+      (terpri stream))
+  (format stream "; Total of ~D ~(~A~) missing entities" (length *wrap-failers*) kind)
+  (if *wrap-failers*
+      (format stream ":~%~@<;   ~@;~{~A ~}~:@>~%" (delete-duplicates (sort (mapcar #'prin1-to-string *wrap-failers*) #'string<) :test #'string=))
       (terpri stream)))
 
 (defun call-with-wrap-attempt (wrappable-name fn format-control format-args)
