@@ -2,6 +2,17 @@
   (:use #:cl #:alexandria)
   (:export
    ;; Conditions
+   #:autowrap-condition
+   #:autowrap-error
+   #:autowrap-continuable-error
+   #:simple-autowrap-continuable-error
+   #:undefined-foreign-type
+   #:undefined-foreign-type-contextualised
+
+   #:sffi-condition
+   #:sffi-error
+   #:sffi-continuable-error
+   #:simple-sffi-continuable-error
    #:invalid-wrapper
 
    ;; Structs

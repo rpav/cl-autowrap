@@ -79,6 +79,33 @@
   ((variadic-p :initarg :variadic-p
                :initform nil :accessor foreign-function-variadic-p)))
 
+(defun undefined-enum-value (value)
+  (autowrap-continuable-error "Undefined enum value: ~S" value))
+
+(defun %undefined-type-error-no-context (typespec)
+  (error 'undefined-foreign-type
+         :typespec typespec))
+
+(defun %undefined-type-error (typespec context-format-control context-format-arguments)
+  (error 'undefined-foreign-type-contextualised
+         :typespec typespec
+         :context-format-control context-format-control
+         :context-format-arguments context-format-arguments))
+
+(defun undefined-type-error-no-context (typespec)
+  (%undefined-type-error-no-context typespec))
+
+(defun undefined-type-error (typespec context-format-control &rest context-format-arguments)
+  (%undefined-type-error typespec context-format-control context-format-arguments))
+
+(defun require-type-no-context (typespec)
+  (or (find-type typespec)
+      (%undefined-type-error-no-context typespec)))
+
+(defun require-type (typespec context-format-control &rest context-format-arguments)
+  (or (find-type typespec)
+      (%undefined-type-error typespec context-format-control context-format-arguments)))
+
 (defmethod foreign-enum-values ((object foreign-alias))
   (foreign-enum-values (foreign-type object)))
 
