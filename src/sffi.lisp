@@ -30,7 +30,7 @@
 
 (defclass foreign-type ()
   ((name :initarg :name :initform nil :accessor foreign-type-name :type symbol)
-   (type :initarg :type :initform nil :accessor foreign-type)))
+   (type :initarg :type :initform nil :accessor foreign-type      :type (not null))))
 
 (defmethod print-object ((o foreign-type) s)
   (print-unreadable-object (o s :type t :identity t)
