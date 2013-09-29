@@ -88,3 +88,31 @@
   (etypecase form
     ((or string pathname) form)
     (list (apply #'asdf-path (car form) (cdr form)))))
+
+ ;; Conditions
+
+;; from pergamum
+(defun report-simple-condition (condition stream)
+  (apply #'format stream (simple-condition-format-control condition) (simple-condition-format-arguments condition)))
+
+;; from pergamum
+(defmacro define-simple-condition-for (base-type &key object-initarg (simple-condition-type 'simple-error) (signaler 'error)
+                                                   (name (format-symbol t "SIMPLE-~A" base-type)))
+  `(progn
+     (define-condition ,name (,base-type ,simple-condition-type)
+       ()
+       (:report report-simple-condition))
+     (defun ,base-type (,@(when object-initarg `(o)) format-control &rest format-arguments)
+       (,signaler ',name ,@(when object-initarg `(,object-initarg o)) :format-control format-control :format-arguments format-arguments))))
+
+;; from pergamum
+(defmacro define-simple-error-for (base-type &key name object-initarg)
+  "Define a simple error subclassing from BASE-TYPE and a corresponding
+function, analogous to ERROR, but also optionally taking the object 
+against which to err, and passing it to ERROR via the OBJECT-INITARG
+keyword. The name of the simple error is constructed by prepending
+'SIMPLE-' to BASE-TYPE.
+Whether or not the error signaller will require and pass the
+object is specified by OBJECT-INITARG being non-NIL."
+  `(define-simple-condition-for ,base-type :object-initarg ,object-initarg :simple-condition-type simple-error :signaler error
+                                ,@(when name `(:name ,name))))
