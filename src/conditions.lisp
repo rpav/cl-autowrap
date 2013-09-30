@@ -58,10 +58,7 @@
 
 (defun call-with-wrap-attempt (wrappable-name fn format-control format-args)
   (handler-case (funcall fn)
-    ((or
-      autowrap-continuable-error
-      sffi-continuable-error)
-        (e)
+    ((or autowrap-continuable-error sffi-continuable-error) (e)
       (cond
         (format-control
          (apply #'format *error-output*
@@ -70,7 +67,8 @@
          (format *error-output* "~@<;   ~@;~A~:@>~%" e))
         (t
          (format *error-output* "~@<; ~@;~A~:@>~%" e)))
-     (push wrappable-name *failed-wraps*))))
+      (push wrappable-name *failed-wraps*)
+      nil)))
 
 (defmacro with-wrap-attempt ((&optional format-control &rest format-args) wrappable-name &body body)
   `(call-with-wrap-attempt ,wrappable-name (lambda () ,@body) ,format-control (list ,@format-args)))
