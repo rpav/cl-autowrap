@@ -30,7 +30,7 @@
 
 (defclass foreign-type ()
   ((name :initarg :name :initform nil :accessor foreign-type-name :type symbol)
-   (type :initarg :type :initform nil :accessor foreign-type)))
+   (type :initarg :type :initform nil :accessor foreign-type      :type (not null))))
 
 (defmethod print-object ((o foreign-type) s)
   (print-unreadable-object (o s :type t :identity t)
@@ -79,18 +79,53 @@
   ((variadic-p :initarg :variadic-p
                :initform nil :accessor foreign-function-variadic-p)))
 
+(defun find-type (typespec)
+  (if (keywordp typespec)
+      typespec
+      (gethash typespec *foreign-types*)))
+
+(defun undefined-enum-value (value)
+  (push `(:enum ,value) *wrap-failers*)
+  (autowrap-continuable-error "Undefined enum value: ~S" value))
+
+(defun %undefined-type-error-no-context (typespec)
+  (push typespec *wrap-failers*)
+  (error 'undefined-foreign-type
+         :typespec typespec))
+
+(defun %undefined-type-error (typespec context-format-control context-format-arguments)
+  (push typespec *wrap-failers*)
+  (error 'undefined-foreign-type-contextualised
+         :typespec typespec
+         :context-format-control context-format-control
+         :context-format-arguments context-format-arguments))
+
+(defun undefined-type-error-no-context (typespec)
+  (%undefined-type-error-no-context typespec))
+
+(defun undefined-type-error (typespec context-format-control &rest context-format-arguments)
+  (%undefined-type-error typespec context-format-control context-format-arguments))
+
+(defun require-type-no-context (typespec)
+  (or (find-type typespec)
+      (%undefined-type-error-no-context typespec)))
+
+(defun require-type (typespec context-format-control &rest context-format-arguments)
+  (or (find-type typespec)
+      (%undefined-type-error typespec context-format-control context-format-arguments)))
+
 (defmethod foreign-enum-values ((object foreign-alias))
   (foreign-enum-values (foreign-type object)))
 
 (defun enum-value (foreign-enum key)
   (let ((enum (if (symbolp foreign-enum)
-                  (find-type foreign-enum)
+                  (require-type foreign-enum "map key ~S of enum ~S to value" key foreign-enum)
                   foreign-enum)))
     (aval key (foreign-enum-values enum))))
 
 (defun enum-key (foreign-enum val)
   (let ((enum (if (symbolp foreign-enum)
-                  (find-type foreign-enum)
+                  (require-type foreign-enum "map value ~S of enum ~S to value" val foreign-enum)
                   foreign-enum)))
     (akey val (foreign-enum-values enum))))
 
@@ -105,9 +140,7 @@
 (defmethod basic-foreign-type ((type symbol))
   (if (keywordp type)
       type
-      (if-let (found-type (find-type type))
-        (basic-foreign-type found-type)
-        (error "No basic type for ~S" type))))
+      (basic-foreign-type (require-type type "determine the basic type of foreign type ~S" type))))
 
 (defmethod basic-foreign-type ((type foreign-enum))
   (foreign-type type))
@@ -169,8 +202,7 @@
 (defmethod foreign-type-size ((type symbol))
   (if (keywordp type)
       (call-next-method)
-      (foreign-type-size (or (find-type type)
-                             (error "No such type: ~S" type)))))
+      (foreign-type-size (require-type type "determine the size of foreign type ~S" type))))
 
  ;; Defining things
 
@@ -181,11 +213,12 @@
 
 (defun define-foreign-extern (name c-symbol type)
   "Define symbol `NAME` to be an extern of type `TYPE`."
-  (let ((extern (make-instance 'foreign-extern
-                               :name name
-                               :c-symbol c-symbol
-                               :type (ensure-type type))))
-    (setf (gethash name *foreign-externs*) extern)))
+  (with-wrap-attempt () name
+    (let ((extern (make-instance 'foreign-extern
+                                 :name name
+                                 :c-symbol c-symbol
+                                 :type (ensure-type type "define foreign extern ~S of type ~S" name type))))
+      (setf (gethash name *foreign-externs*) extern))))
 
 (defun define-foreign-record (name type bit-size bit-alignment field-list)
   "Define a foreign record (struct or union) given `NAME`, a symbol,
@@ -193,15 +226,16 @@
 name for the type will be `(:struct NAME)` or `(:union NAME)`, as
 appropriate."
   (assert (member type '(:struct :union)))
-  (let ((record (make-instance 'foreign-record
-                               :name name
-                               :type type
-                               :bit-size bit-size
-                               :bit-alignment bit-alignment)))
-    (define-foreign-type `(,type (,name)) record)
-    (setf (foreign-record-fields record)
-          (parse-record-fields field-list))
-    record))
+  (with-wrap-attempt ("define foreign ~A ~S" type name) name
+    (let ((record (make-instance 'foreign-record
+                                 :name name
+                                 :type type
+                                 :bit-size bit-size
+                                 :bit-alignment bit-alignment)))
+      (define-foreign-type `(,type (,name)) record)
+      (setf (foreign-record-fields record)
+            (parse-record-fields type name field-list))
+      record)))
 
 (defun define-foreign-enum (name id value-list)
   "Define a foreign enum given `NAME`, a symbol, and a list of
@@ -218,10 +252,11 @@ symbol-to-integer mappings, `VALUE-LIST`."
     (define-foreign-type `(:enum (,name)) enum)))
 
 (defun define-foreign-alias (name type)
-  (define-foreign-type name
-      (make-instance 'foreign-alias
-                     :name name
-                     :type (ensure-type type))))
+  (with-wrap-attempt () name
+    (define-foreign-type name
+        (make-instance 'foreign-alias
+                       :name name
+                       :type (ensure-type type "alias foreign type ~S to ~S" type name)))))
 
 (defun define-foreign-function (name-and-options return-type params)
   "=> FOREIGN-FUNCTION
@@ -232,22 +267,21 @@ foreign function looks like .. it doesn't actually DEFUN something to
 call it.  "
   (destructuring-bind (name c-symbol &key variadic-p &allow-other-keys)
       name-and-options
-    (let* ((return-type (ensure-type return-type))
-           (fun (make-instance 'foreign-function
-                               :name name
-                               :c-symbol c-symbol
-                               :type return-type
-                               :variadic-p variadic-p)))
-      (setf (foreign-record-fields fun)
-            (parse-function-params params))
-      (setf (gethash name *foreign-functions*) fun))))
+    (with-wrap-attempt () name
+      (let* ((return-type (ensure-type return-type "define function ~S (nee ~S) with return type ~S" name c-symbol return-type))
+             (fun (make-instance 'foreign-function
+                                 :name name
+                                 :c-symbol c-symbol
+                                 :type return-type
+                                 :variadic-p variadic-p)))
+        (setf (foreign-record-fields fun)
+              (loop for param in params
+                 collect (make-instance 'foreign-field :name (car param)
+                                        :type (ensure-type (cadr param) "define function ~S (nee ~S) wrt. parameter ~S of type ~S"
+                                                           name c-symbol (car param) (cadr param)))))
+        (setf (gethash name *foreign-functions*) fun)))))
 
-(defun parse-function-params (params)
-  (loop for param in params
-        collect (make-instance 'foreign-field :name (car param)
-                                              :type (ensure-type (cadr param)))))
-
-(defun parse-record-fields (field-list)
+(defun parse-record-fields (compound-type compound-type-name field-list)
   (loop for field in field-list
         collect
         (destructuring-bind (name type &key bitfield-p bit-size bit-offset
@@ -255,7 +289,7 @@ call it.  "
             field
           (make-instance 'foreign-record-field
                          :name name
-                         :type (ensure-type type)
+                         :type (ensure-type type "define ~(~S~) ~S wrt. field ~S of type ~S" compound-type compound-type-name name type)
                          :bitfield-p bitfield-p
                          :bit-size bit-size
                          :bit-offset bit-offset
@@ -263,11 +297,6 @@ call it.  "
                          :bit-width bit-width))
           into fields
         finally (return fields)))
-
-(defun find-type (typespec)
-  (if (keywordp typespec)
-      typespec
-      (gethash typespec *foreign-types*)))
 
 (defun struct-or-union-p (name)
   (or (find-type `(:struct (,name)))
@@ -287,15 +316,20 @@ call it.  "
 Given `NAME-OR-TYPE`, return the field object called `FIELD-NAME`."
   (let ((rec (etypecase name-or-type
                (foreign-record name-or-type)
-               (symbol (find-type name-or-type)))))
+               (symbol (require-type name-or-type "obtain the type of the field ~S of structure type ~S" field-name name-or-type)))))
     (loop for field in (foreign-record-fields rec) do
       (when (eq field-name (foreign-type-name field))
         (return field)))))
 
-(defun ensure-type (typespec)
-  (let ((type (find-type typespec)))
-    (or type
-        (create-type-from-typespec typespec))))
+(defun %ensure-type (typespec context-format-control context-format-args)
+  (or (find-type typespec)
+      (when (atom typespec)
+        (%undefined-type-error typespec context-format-control context-format-args))
+      (create-type-from-complex-typespec typespec context-format-control context-format-args)
+      (%undefined-type-error typespec context-format-control context-format-args)))
+
+(defun ensure-type (typespec context-format-control &rest context-format-args)
+  (%ensure-type typespec context-format-control context-format-args))
 
 (defun parse-record-name (type-name)
   (destructuring-bind (name &key id &allow-other-keys)
@@ -306,37 +340,36 @@ Given `NAME-OR-TYPE`, return the field object called `FIELD-NAME`."
           (setf (foreign-anonymous id) sym)
           sym))))
 
-(defun create-type-from-typespec (typespec)
+(defun create-type-from-complex-typespec (typespec context-format-control context-format-args)
   "=> TYPE
 
 Create a type from `TYPESPEC` and return the `TYPE` structure representing it."
-  (if (not (listp typespec))
-      (find-type typespec)
-      (let ((type (car typespec)))
-        (ecase type
-          (enum
-           (let ((name (parse-record-name (cadr typespec))))
-             (define-foreign-enum name nil (cddr typespec))))
-          ((struct union)
-           (let ((name (parse-record-name (cadr typespec))))
-             (destructuring-bind (_ &key bit-size bit-alignment &allow-other-keys)
-                 (cadr typespec)
-               (declare (ignore _))
-               (define-foreign-record name (make-keyword type) bit-size bit-alignment (cddr typespec)))))
-          ((:enum :struct :union)
-           (let ((name (list type (list (parse-record-name (cadr typespec))))))
-             (find-type name)))
-          (:array
-           (let ((type (ensure-type (cadr typespec)))
-                 (size (caddr typespec)))
-             (make-instance 'foreign-array :type type :size size)))
-          (:string
-           (define-foreign-type '(:string) (make-instance 'foreign-string)))
-          (:pointer
-           (define-foreign-type
-               `(:pointer ,(cdr typespec))
-               (make-instance 'foreign-pointer :type (ensure-type (cadr typespec)))))
-          (:void :void)))))
+  (declare (cons typespec))
+  (let ((type (car typespec)))
+    (ecase type
+      (enum
+       (let ((name (parse-record-name (cadr typespec))))
+         (define-foreign-enum name nil (cddr typespec))))
+      ((struct union)
+       (let ((name (parse-record-name (cadr typespec))))
+         (destructuring-bind (_ &key bit-size bit-alignment &allow-other-keys)
+             (cadr typespec)
+           (declare (ignore _))
+           (define-foreign-record name (make-keyword type) bit-size bit-alignment (cddr typespec)))))
+      ((:enum :struct :union)
+       (let ((name (list type (list (parse-record-name (cadr typespec))))))
+         (find-type name)))
+      (:array
+       (let ((type (%ensure-type (cadr typespec) context-format-control context-format-args))
+             (size (caddr typespec)))
+         (make-instance 'foreign-array :type type :size size)))
+      (:string
+       (define-foreign-type '(:string) (make-instance 'foreign-string)))
+      (:pointer
+       (define-foreign-type
+           `(:pointer ,(cdr typespec))
+           (make-instance 'foreign-pointer :type (%ensure-type (cadr typespec) context-format-control context-format-args))))
+      (:void :void))))
 
  ;; Making Things
 
@@ -406,7 +439,7 @@ Create a type from `TYPESPEC` and return the `TYPE` structure representing it."
            (cond
              ((keywordp value)
               (or (enum-value type-name value)
-                  (error "Enum value not found: ~S" value)))
+                  (undefined-enum-value value)))
              ((integerp value) value)
              (t `(let ((,name ,value))
                    (etypecase ,name
@@ -503,32 +536,34 @@ types."
                                                         (foreign-type fun))))))))
 
 (defmacro define-cfun (name-or-function &optional (package *package*))
-  (let ((fun (find-function name-or-function)))
-    (with-slots (name type c-symbol fields) fun
-      (let ((fun-name (intern (symbol-name name) package))
-            (params (mapcar #'foreign-type-name fields)))
-        (with-gensyms (!fun !fields rest)
-          `(defmacro ,fun-name (,@params ,@(when (foreign-function-variadic-p fun) `(&rest ,rest)))
-             (let ((,!fun (find-function ',name-or-function)))
-               (with-slots ((,!fields fields)) ,!fun
-                 (foreign-to-ffi
-                  (and (car ,!fields) (foreign-type (car ,!fields)))
-                  (and (car ,!fields) (foreign-type-name (car ,!fields)))
-                  (list ,@params)
-                  ,!fields
-                  (make-foreign-funcall ,!fun ,(when (foreign-function-variadic-p fun) rest)))))))))))
+  (when-let ((fun (find-function name-or-function)))
+    (with-wrap-attempt ("define C function ~S" name-or-function) name-or-function
+      (with-slots (name type c-symbol fields) fun
+        (let ((fun-name (intern (symbol-name name) package))
+              (params (mapcar #'foreign-type-name fields)))
+          (with-gensyms (!fun !fields rest)
+            `(defmacro ,fun-name (,@params ,@(when (foreign-function-variadic-p fun) `(&rest ,rest)))
+               (let ((,!fun (find-function ',name-or-function)))
+                 (with-slots ((,!fields fields)) ,!fun
+                   (foreign-to-ffi
+                    (and (car ,!fields) (foreign-type (car ,!fields)))
+                    (and (car ,!fields) (foreign-type-name (car ,!fields)))
+                    (list ,@params)
+                    ,!fields
+                    (make-foreign-funcall ,!fun ,(when (foreign-function-variadic-p fun) rest))))))))))))
 
 (defmacro define-cextern (name &optional (package *package*))
-  (let* ((*package* package)
-         (extern (find-extern name))
-         (ptr-or-error
-           `(or (cffi-sys:%foreign-symbol-pointer ,(foreign-symbol-c-symbol extern) :default)
-                (error "Foreign extern symbol not found: ~S" ',name))))
-    (if (foreign-scalar-p (foreign-type extern))
-        `(define-symbol-macro ,name
-             (cffi-sys:%mem-ref ,ptr-or-error
-                                ,(basic-foreign-type (foreign-type extern))))
-        `(define-symbol-macro ,name ,ptr-or-error))))
+  (with-wrap-attempt ("define extern ~S" name) name
+    (let* ((*package* package)
+           (extern (find-extern name))
+           (ptr-or-error
+            `(or (cffi-sys:%foreign-symbol-pointer ,(foreign-symbol-c-symbol extern) :default)
+                 (error "Foreign extern symbol not found: ~S" ',name))))
+      (if (foreign-scalar-p (foreign-type extern))
+          `(define-symbol-macro ,name
+               (cffi-sys:%mem-ref ,ptr-or-error
+                                  ,(basic-foreign-type (foreign-type extern))))
+          `(define-symbol-macro ,name ,ptr-or-error)))))
 
  ;; Bitfields
 
@@ -597,7 +632,7 @@ types."
 
 (defun make-field-deref (field ref)
   (let* ((type (or (basic-foreign-type (foreign-type field))
-                   (error "~@<Dereferencing a field of unknown type: ~S.~:@>" field))))
+                   (undefined-type-error (foreign-type field) "dereference field ~S" field))))
     `(cffi-sys:%mem-ref ,ref ,type)))
 
 (defun make-field-setter (field ref value)
@@ -728,45 +763,47 @@ types."
                   (make-normal-accessor field accessor field-ref))))))
 
 (defmacro define-accessors (foreign-record &optional (package *package*))
-  (let ((*package* (find-package package))
-        (foreign-record (etypecase foreign-record
-                          (foreign-record foreign-record)
-                          ((or symbol cons) (find-type foreign-record)))))
-    (unless (and (typep foreign-record 'foreign-alias)
-                 (struct-or-union-p (foreign-type-name foreign-record)))
-      (let* ((*accessor-forms*)
-             (*accessor-seen-types*)
-             (*accessor-params* (list (foreign-type-name foreign-record)))
-             (*accessor-record-name* (foreign-type-name foreign-record))
-             (actual-foreign-record (basic-foreign-type foreign-record)))
-        (when (typep actual-foreign-record 'foreign-record)
-          (%make-accessors actual-foreign-record :prefix *accessor-record-name*)
-          `(progn ,@(nreverse *accessor-forms*)))))))
+  (with-wrap-attempt ("define accessors for structure ~S" foreign-record) foreign-record
+    (let ((*package* (find-package package))
+          (foreign-record (etypecase foreign-record
+                            (foreign-record foreign-record)
+                            ((or symbol cons) (require-type-no-context foreign-record)))))
+      (unless (and (typep foreign-record 'foreign-alias)
+                   (struct-or-union-p (foreign-type-name foreign-record)))
+        (let* ((*accessor-forms*)
+               (*accessor-seen-types*)
+               (*accessor-params* (list (foreign-type-name foreign-record)))
+               (*accessor-record-name* (foreign-type-name foreign-record))
+               (actual-foreign-record (basic-foreign-type foreign-record)))
+          (when (typep actual-foreign-record 'foreign-record)
+            (%make-accessors actual-foreign-record :prefix *accessor-record-name*)
+            `(progn ,@(nreverse *accessor-forms*))))))))
 
 (defmacro define-wrapper (type &optional (package *package*))
-  (let* ((*package* package)
-         (type (etypecase type
-                 (foreign-type type)
-                 ((or symbol cons) (find-type type))))
-         ;; Note this is a bit of a hack because the following is valid
-         ;; in C:
-         ;;
-         ;;     typedef struct x { ... } *x;
-         ;;
-         ;; Thus in this case we make an exception and define x* for
-         ;; the alias
-         (existing (find-class (foreign-type-name type) nil))
-         (star-p (and existing (typep type 'foreign-pointer)))
-         ;; FIXME: These should be given a separate name, but this has
-         ;; to be deduced _everywhere_.
-         (name (foreign-type-name type)))
-    (when (or (not existing) star-p)
-      `(defstruct (,name
-                   (:include ,(if (or (keywordp (foreign-type type))
-                                      (anonymous-p (foreign-type type))
-                                      (null (foreign-type-name (foreign-type type))))
-                                  'wrapper
-                                  (foreign-type-name (foreign-type type)))))))))
+  (with-wrap-attempt ("define lisp structure for foreign structure ~S" type) type
+    (let* ((*package* package)
+           (type (etypecase type
+                   (foreign-type type)
+                   ((or symbol cons) (require-type-no-context type))))
+           ;; Note this is a bit of a hack because the following is valid
+           ;; in C:
+           ;;
+           ;;     typedef struct x { ... } *x;
+           ;;
+           ;; Thus in this case we make an exception and define x* for
+           ;; the alias
+           (existing (find-class (foreign-type-name type) nil))
+           (star-p (and existing (typep type 'foreign-pointer)))
+           ;; FIXME: These should be given a separate name, but this has
+           ;; to be deduced _everywhere_.
+           (name (foreign-type-name type)))
+      (when (or (not existing) star-p)
+        `(defstruct (,name
+                      (:include ,(if (or (keywordp (foreign-type type))
+                                         (anonymous-p (foreign-type type))
+                                         (null (foreign-type-name (foreign-type type))))
+                                     'wrapper
+                                     (foreign-type-name (foreign-type type))))))))))
 
 
  ;; Allocating things
@@ -780,7 +817,7 @@ types."
 Freeing is up to you!"
   (etypecase type
     (keyword (alloc-ptr type count))
-    (t (let ((wrapper (make-instance (foreign-type-name (find-type type)))))
+    (t (let ((wrapper (make-instance (foreign-type-name (require-type type "allocate a wrapper for an instance of foreign type ~S" type)))))
          (setf (wrapper-ptr wrapper)
                (alloc-ptr type count))
          wrapper))))
@@ -804,7 +841,7 @@ Freeing is up to you!"
        ,@(mapcar #'(lambda (bind) `(free ,(car bind))) bindings))))
 
 (defun c-aptr (wrapper index &optional (type (foreign-type-name wrapper)))
-  (let ((size (foreign-type-size (find-type type))))
+  (let ((size (foreign-type-size (require-type type "index into array of elements of type ~S" type))))
     (cffi-sys:inc-pointer (ptr wrapper) (* index size))))
 
 (defun c-aref (wrapper index &optional (type (foreign-type-name wrapper)))
@@ -816,7 +853,7 @@ Freeing is up to you!"
 (define-compiler-macro c-aptr (&whole whole wrapper index
                                      &optional (type (foreign-type-name wrapper)))
   (if (constantp type)
-      (let ((size (foreign-type-size (find-type (eval type)))))
+      (let ((size (foreign-type-size (require-type (eval type) "index into array of elements of type ~S" type))))
         `(cffi-sys:inc-pointer (ptr ,wrapper) (* ,index ,size)))
       whole))
 
@@ -852,7 +889,10 @@ aliases to be specified."
   `(cffi-sys:%defcallback
     ,name ,(basic-foreign-type return-type)
     ,(mapcar #'car lambda-list)
-    ,(mapcar (lambda (x) (basic-foreign-type (cadr x))) lambda-list)
+    ,(mapcar (lambda (x) (basic-foreign-type (ensure-type (cadr x)
+                                                          "define callback ~S, wrt. argument ~S of type ~S"
+                                                          name (car x) (cadr x))))
+             lambda-list)
     (progn ,@body)
     :convention :cdecl))
 
