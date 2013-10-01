@@ -66,6 +66,9 @@
    ;; Parsing and input
    #:c-include
 
+   ;; Debug
+   #:*trace-c2ffi*
+
    ;; Utility
    #:asdf-path))
 
