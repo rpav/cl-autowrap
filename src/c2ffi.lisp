@@ -38,7 +38,11 @@
 
  ;; c2ffi
 
+(defvar *trace-c2ffi* nil)
+
 (defun run-check (program args &key output)
+  (when *trace-c2ffi*
+    (format *debug-io* "; ~A~{ ~A~}~%" program args))
   (= 0 (nth-value 1 (external-program:run program args :output output))))
 
 (defun c2ffi-p ()
