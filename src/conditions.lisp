@@ -53,6 +53,10 @@
         (format stream ":~%~@<;   ~@;~{~A ~}~:@>~%" unique-failers)
         (terpri stream))))
 
+(defun clear-wrap-failures ()
+  (setf *failed-wraps* nil)
+  (setf *wrap-failers* nil))
+
 (defmacro compile-time-report-wrap-failures ()
   (report-wrap-failures 'compile-time *error-output*))
 

@@ -7,6 +7,7 @@
 (defvar *foreign-types* (make-hash-table :test 'equal))
 (defvar *foreign-functions* (make-hash-table))
 (defvar *foreign-externs* (make-hash-table))
+(defvar *foreign-incomplete* (make-hash-table :test 'eq))
 
  ;; Temporary record indexing
 
@@ -227,14 +228,24 @@ name for the type will be `(:struct NAME)` or `(:union NAME)`, as
 appropriate."
   (assert (member type '(:struct :union)))
   (with-wrap-attempt ("define foreign ~A ~S" type name) name
-    (let ((record (make-instance 'foreign-record
-                                 :name name
-                                 :type type
-                                 :bit-size bit-size
-                                 :bit-alignment bit-alignment)))
-      (define-foreign-type `(,type (,name)) record)
-      (setf (foreign-record-fields record)
-            (parse-record-fields type name field-list))
+    (let* ((record (gethash name *foreign-incomplete*))
+           (incomplete-p record))
+      (unless record
+        (setf record (make-instance 'foreign-record
+                                    :name name
+                                    :type type))
+        (define-foreign-type `(,type (,name)) record))
+      (unless (= 0 bit-size)
+        (setf (foreign-record-bit-size record) bit-size))
+      (unless (= 0 bit-alignment)
+        (setf (foreign-record-bit-alignment record) bit-alignment))
+      (if (car field-list)
+          (progn
+            (setf (foreign-record-fields record)
+                  (parse-record-fields type name field-list))
+            (when incomplete-p
+              (remhash name *foreign-incomplete*)))
+          (setf (gethash name *foreign-incomplete*) record))
       record)))
 
 (defun define-foreign-enum (name id value-list)
