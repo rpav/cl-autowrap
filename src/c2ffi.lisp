@@ -65,10 +65,12 @@ doesn't exist, we will get a return code other than 0."
                                     (append arch
                                             sysincludes))
                      :output *standard-output*)
-      (run-check "c2ffi" (list* output-h "-o" output-m
-                                (append arch
-                                        sysincludes))
-                 :output *standard-output*))))
+      (prog1
+          (run-check "c2ffi" (list* output-h "-o" output-m
+                                    (append arch
+                                            sysincludes))
+                     :output *standard-output*)
+        (delete-file output-h)))))
 
  ;; Specs and Loading
 
