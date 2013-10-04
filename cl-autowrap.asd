@@ -10,7 +10,7 @@
   :version "1.0"
 
   :depends-on (:alexandria :cffi :cl-json :cl-ppcre
-               :external-program :trivial-features)
+               :external-program :cl-fad :trivial-features)
   :pathname "src"
   :serial t
 
