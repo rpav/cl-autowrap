@@ -396,7 +396,6 @@ Return the appropriate CFFI name."))
                          collect `(define-wrapper ,record ,wrapper-package))
                  ,@(loop for alias in (reverse *foreign-alias-list*)
                          collect `(define-wrapper ,alias ,wrapper-package))
-                 #+-
                  ,@(loop for record in (reverse *foreign-record-list*)
                          collect `(define-accessors ,record ,accessor-package))
                  ,@(loop for symbol in (reverse *foreign-function-list*)
