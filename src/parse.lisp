@@ -7,6 +7,7 @@
 (defvar *foreign-extern-list* nil)
 (defvar *foreign-constant-list* nil)
 (defvar *foreign-raw-constant-list* nil)
+(defvar *foreign-constant-excludes* nil)
 (defvar *foreign-other-exports-list* nil)
 (defvar *foreign-symbol-exceptions* nil)
 (defvar *foreign-symbol-regex* nil)
@@ -102,6 +103,15 @@ of pointer-to-record"
       ((string= tag "typedef") (pointer-alias-form-p (aval :type form)))
       ((string= tag ":pointer") t)
       (t nil))))
+
+(defun maybe-add-constant (name value)
+  (push (cons name value) *foreign-raw-constant-list*)
+  (unless (included-p name *foreign-constant-excludes*)
+    (let ((sym (foreign-type-symbol name :cconst *package*)))
+      (pushnew sym *foreign-constant-list*)
+      (if (stringp value)
+          `(defvar ,sym ,value)
+          `(defconstant ,sym ,value)))))
 
  ;; Parsing
 
@@ -235,9 +245,7 @@ Return the appropriate CFFI name."))
 (defun parse-enum-to-const (fields)
   (loop for field in fields
         as name = (aval :name field)
-        as sym = (foreign-type-symbol name :cconst *package*)
-        collect `(defconstant ,sym ,(aval :value field))
-        do (pushnew sym *foreign-constant-list*)))
+        collect (maybe-add-constant name (aval :value field))))
 
 (defmethod parse-form (form (tag (eql 'struct)) &key &allow-other-keys)
   (alist-bind (name fields) form
@@ -284,11 +292,7 @@ Return the appropriate CFFI name."))
 
 (defmethod parse-form (form (tag (eql 'const)) &key &allow-other-keys)
   (alist-bind (name value) form
-    (let ((sym (foreign-type-symbol name :cconst *package*)))
-      (pushnew sym *foreign-constant-list*)
-      (if (stringp value)
-          `(defvar ,sym ,value)
-          `(defconstant ,sym ,value)))))
+    (maybe-add-constant name value)))
 
 (defmethod parse-form (form (tag (eql 'extern)) &key &allow-other-keys)
   (alist-bind (name type) form
@@ -299,6 +303,52 @@ Return the appropriate CFFI name."))
 (defun read-json (file)
   (let ((*read-default-float-format* 'double-float))
     (json:decode-json file)))
+
+ ;; c-include utility
+
+(defun make-scanners (list)
+  (mapcar (lambda (x)
+            (cons (apply #'ppcre:create-scanner (car x) (cadr x))
+                  (eval (caddr x))))
+          list))
+
+(defun read-parse-forms (in-spec exclude-definitions exclude-sources include-sources)
+  (loop for form in (read-json in-spec)
+        unless (or (included-p (aval :name form) exclude-definitions)
+                   (and (included-p (aval :location form) exclude-sources)
+                        (not (included-p (aval :location form) include-sources))))
+          collect (parse-form form (aval :tag form))))
+
+(defun make-define-list (def-symbol list package)
+ (loop for x in (reverse list)
+       collect `(,def-symbol ,x ,package)))
+
+(defun make-export-list (list package)
+  `(export '(,@(mapcar
+                (lambda (x)
+                  (etypecase x
+                    (symbol x)
+                    (cons (caadr x))))
+                list))
+           ,package))
+
+(defun make-constant-accessor (name value-map-name)
+  (with-gensyms (internal-name)
+    `((defvar ,value-map-name)
+      (defun ,internal-name (name)
+        (declare (string name))
+        (multiple-value-bind (value presentp) (gethash name ,value-map-name)
+          (if presentp
+              value
+              (error "~@<Unknown constant: ~S~%~:@>" name))))
+      (defun ,name (name)
+        (,internal-name name))
+      ;; I wonder if we really must break this loop..
+      (define-compiler-macro ,name (&whole whole name)
+        (if (stringp name)
+            (,internal-name name)
+            whole))
+      (export '(,name)))))
 
  ;; Exported API
 
@@ -313,13 +363,12 @@ Return the appropriate CFFI name."))
                      (accessor-package wrapper-package)
                      (constant-package definition-package)
                      (extern-package accessor-package)
-                     constant-accessor
-                     trace-c2ffi)
+                     constant-accessor exclude-constants
+                     trace-c2ffi no-accessors no-functions)
   (let ((*foreign-symbol-exceptions* (alist-hash-table symbol-exceptions :test 'equal))
-        (*foreign-symbol-regex* (mapcar (lambda (x)
-                                          (cons (apply #'ppcre:create-scanner (car x) (cadr x))
-                                                (eval (caddr x))))
-                                        symbol-regex))
+        (*foreign-symbol-regex* (make-scanners symbol-regex))
+        (*foreign-constant-excludes* (mapcar #'ppcre:create-scanner exclude-constants))
+        (*foreign-raw-constant-list*)
         (exclude-definitions (mapcar #'ppcre:create-scanner exclude-definitions))
         (exclude-sources (mapcar #'ppcre:create-scanner exclude-sources))
         (*package* (find-package definition-package))
@@ -332,8 +381,7 @@ Return the appropriate CFFI name."))
         (accessor-package (find-package accessor-package))
         (constant-package (find-package constant-package))
         (extern-package (find-package extern-package))
-        (constant-name-value-map (gensym "CONSTANT-NAME-VALUE-MAP"))
-        (constant-accessor-internal (gensym)))
+        (constant-name-value-map (gensym "CONSTANT-NAME-VALUE-MAP-")))
     (multiple-value-bind (spec-name)
         (let ((*trace-c2ffi* trace-c2ffi))
           (ensure-local-spec h-file
@@ -346,65 +394,44 @@ Return the appropriate CFFI name."))
              (eval-when (:compile-toplevel :load-toplevel :execute)
                (setf *failed-wraps* nil)
                ,@(when constant-accessor
-                   `((defvar ,constant-name-value-map)
-                     (defun ,constant-accessor-internal (name)
-                       (declare (string name))
-                       (multiple-value-bind (value presentp) (gethash name ,constant-name-value-map)
-                         (if presentp
-                             value
-                             (error "~@<Unknown constant: ~S~%~:@>" name))))
-                     (defun ,constant-accessor (name)
-                       (,constant-accessor-internal name))
-                     ;; I wonder if we really must break this loop..
-                     (define-compiler-macro ,constant-accessor (&whole whole name)
-                       (if (stringp name)
-                           (,constant-accessor-internal name)
-                           whole))
-                     (export '(,constant-accessor))))
+                   (make-constant-accessor constant-accessor constant-name-value-map))
+               ;; Read and parse the JSON
+               ;;
+               ;; Note that SBCL seems to have issues with this not
+               ;; being a toplevel form as of 1.1.9 and will crash.
                #-sbcl
                (with-anonymous-indexing
-                 ,@(loop for form in (read-json in-spec)
-                         unless (or (included-p (aval :name form) exclude-definitions)
-                                    (included-p (aval :location form) exclude-sources))
-                           collect (parse-form form (aval :tag form))))
+                 ,@(read-parse-forms in-spec exclude-definitions exclude-sources include-sources))
                #+sbcl
                (progn
                  (setf *foreign-record-index* (make-hash-table))
-                 ,@(loop for form in (read-json in-spec)
-                         unless (or (included-p (aval :name form) exclude-definitions)
-                                    (and (included-p (aval :location form) exclude-sources)
-                                         (not (included-p (aval :location form) include-sources))))
-                           collect (parse-form form (aval :tag form)))
+                 ,@(read-parse-forms in-spec exclude-definitions exclude-sources include-sources)
                  (setf *foreign-record-index* nil))
+               ;; Map constants
                ,@(when constant-accessor
-                   `((setf ,constant-name-value-map (make-hash-table :test 'equal :size ,(length *foreign-constant-list*)))
+                   `((setf ,constant-name-value-map
+                           (make-hash-table :test 'equal :size ,(length *foreign-constant-list*)))
                      (loop for (name . value) in ',*foreign-raw-constant-list*
-                           do
-                              (setf (gethash name ,constant-name-value-map) value))))
-               ,@(loop for record in (reverse *foreign-record-list*)
-                       collect `(define-wrapper ,record ,wrapper-package))
-               ,@(loop for alias in (reverse *foreign-alias-list*)
-                       collect `(define-wrapper ,alias ,wrapper-package))
-               ,@(loop for record in (reverse *foreign-record-list*)
-                       collect `(define-accessors ,record ,accessor-package))
-               ,@(loop for symbol in (reverse *foreign-function-list*)
-                       collect `(define-cfun ,symbol ,function-package))
-               ,@(loop for symbol in (reverse *foreign-extern-list*)
-                       collect `(define-cextern ,symbol ,extern-package))
+                           do (setf (gethash name ,constant-name-value-map) value))))
+               ;; Definitions
+               ,@(make-define-list 'define-wrapper *foreign-record-list* wrapper-package)
+               ,@(make-define-list 'define-wrapper *foreign-alias-list* wrapper-package)
+               ,@(unless no-accessors
+                   (make-define-list 'define-accessors *foreign-record-list* accessor-package))
+               ,@(unless no-functions
+                   (make-define-list 'define-cfun *foreign-function-list* function-package))
+               ,@(make-define-list 'define-cextern *foreign-extern-list* extern-package)
+               ;; Report on anything missing
                (compile-time-report-wrap-failures)
+               ;; Exports
                ,(when *foreign-record-list*
-                  `(export '(,@(mapcar (lambda (x) (etypecase x (symbol x) (cons (caadr x))))
-                                *foreign-record-list*))))
+                  (make-export-list *foreign-record-list* *package*))
                ,(when *foreign-function-list*
-                  `(export ',(mapcar (lambda (x) (intern (symbol-name x) function-package))
-                                     *foreign-function-list*)
-                           ,function-package))
+                  (make-export-list *foreign-function-list* function-package))
                ,(when *foreign-extern-list*
-                  `(export ',(mapcar (lambda (x) (intern (symbol-name x) extern-package))
-                                     *foreign-extern-list*) ,extern-package))
+                  (make-export-list *foreign-extern-list* extern-package))
                ,(when *foreign-constant-list*
-                  `(export ',(mapcar (lambda (x) (intern (symbol-name x) constant-package))
-                                     *foreign-constant-list*) ,constant-package))
+                  (make-export-list *foreign-constant-list* constant-package))
                ,(when *foreign-other-exports-list*
                   `(export ',*foreign-other-exports-list* ,definition-package)))
              (eval-when (:load-toplevel :execute)
