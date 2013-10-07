@@ -11,7 +11,7 @@
 
   :depends-on (:alexandria :cffi :cl-json :cl-ppcre
                :external-program :cl-fad :trivial-features)
-  :pathname "src"
+  :pathname "autowrap"
   :serial t
 
   :components
