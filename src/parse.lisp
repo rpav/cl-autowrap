@@ -323,12 +323,9 @@ Return the appropriate CFFI name."))
  (loop for x in (reverse list)
        collect `(,def-symbol ,x ,package)))
 
-(defun make-export-list (list package)
-  `(export '(,@(mapcar
-                (lambda (x)
-                  (etypecase x
-                    (symbol x)
-                    (cons (caadr x))))
+(defun make-export-list (list package &optional sym-fun)
+  `(export '(,@(mapcar (or sym-fun
+                        (lambda (x) (intern (symbol-name x) package)))
                 list))
            ,package))
 
@@ -425,7 +422,8 @@ Return the appropriate CFFI name."))
                (compile-time-report-wrap-failures)
                ;; Exports
                ,(when *foreign-record-list*
-                  (make-export-list *foreign-record-list* *package*))
+                  (make-export-list *foreign-record-list* *package*
+                                    (lambda (x) (etypecase x (symbol x) (cons (caadr x))))))
                ,(when *foreign-function-list*
                   (make-export-list *foreign-function-list* function-package))
                ,(when *foreign-extern-list*
