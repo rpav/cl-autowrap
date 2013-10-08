@@ -29,7 +29,10 @@
    #:foreign-type #:foreign-type-name #:basic-foreign-type
 
    #:foreign-record #:foreign-record-bit-size #:foreign-record-bit-alignment
-   #:foreign-record-fields
+   #:foreign-record-fields #:find-record-field
+
+   #:foreign-pointer #:foreign-alias #:foreign-array #:foreign-array-size
+   #:foreign-string
 
    #:foreign-field
    #:foreign-record-field #:frf-bitfield-p #:frf-bit-offset #:frf-bit-alignment
