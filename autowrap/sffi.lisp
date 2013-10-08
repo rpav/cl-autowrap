@@ -31,7 +31,7 @@
 
 (defclass foreign-type ()
   ((name :initarg :name :initform nil :accessor foreign-type-name :type symbol)
-   (type :initarg :type :initform nil :accessor foreign-type      :type (not null))))
+   (type :initarg :type :initform nil :accessor foreign-type :type (not null))))
 
 (defmethod print-object ((o foreign-type) s)
   (print-unreadable-object (o s :type t :identity t)
@@ -42,7 +42,8 @@
 (defclass foreign-array (foreign-type)
   ((size :initarg :size :initform 0 :accessor foreign-array-size :type integer)))
 
-(defclass foreign-string (foreign-pointer) ())
+(defclass foreign-string (foreign-pointer)
+  ((type :initform :char)))
 
 (defclass foreign-record (foreign-type)
   ((bit-size :initarg :bit-size :initform nil :accessor foreign-record-bit-size)
