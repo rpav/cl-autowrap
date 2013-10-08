@@ -54,9 +54,10 @@ doesn't exist, we will get a return code other than 0."
   "Write a header including the given input-file and the macro-file
 c2ffi will output.  Return the filename."
   (with-open-file (stream macro-file :direction :output :if-exists :supersede))
-  (fad:with-output-to-temporary-file (stream)
-    (format stream "#include \"~A\"~%" input-file)
-    (format stream "#include \"~A\"~%" macro-file)))
+  (namestring
+   (fad:with-output-to-temporary-file (stream)
+     (format stream "#include \"~A\"~%" input-file)
+     (format stream "#include \"~A\"~%" macro-file))))
 
 (defun run-c2ffi (input-file output-basename &key arch sysincludes)
   "Run c2ffi on `INPUT-FILE`, outputting to `OUTPUT-FILE` and
