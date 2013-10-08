@@ -26,7 +26,7 @@
    #:parse #:parse-file
 
    ;; SFFI
-   #:foreign-type #:foreign-type-name
+   #:foreign-type #:foreign-type-name #:basic-foreign-type
 
    #:foreign-record #:foreign-record-bit-size #:foreign-record-bit-alignment
    #:foreign-record-fields
@@ -74,6 +74,7 @@
 
 (defpackage :autowrap.minimal
   (:documentation "A minimal set of useful symbols for doing common things with autowrap.")
+  (:use)
   (:import-from
    :autowrap
 
