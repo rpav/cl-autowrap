@@ -52,6 +52,8 @@
              (intern (format nil "+~A+" string) package))
             ((eq type :cenumfield)
              (alexandria:make-keyword string))
+            ((eq type :cfield)
+             (alexandria:make-keyword string))
             (t (intern string package)))))))
 
 (defun foreign-type-symbol (string type package)
@@ -224,8 +226,6 @@ Return the appropriate CFFI name."))
         collect
         (alist-bind (name type bit-size bit-offset bit-alignment) field
           (let ((symbol (foreign-type-symbol name field-type *package*)))
-            (when (symbol-package symbol)
-              (pushnew symbol *foreign-other-exports-list*))
             (list* symbol
                    `(,@(parse-type type (aval :tag type))
                      ,@(when (eq field-type :cfield)

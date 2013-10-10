@@ -16,7 +16,7 @@
    #:invalid-wrapper
 
    ;; Structs
-   #:wrapper
+   #:wrapper #:anonymous-type
 
    ;; Functions
    #:make-wrapper #:wrapped-ptr #:wrapper-valid-p

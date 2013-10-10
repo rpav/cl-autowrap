@@ -13,6 +13,8 @@
   (ptr #.(cffi:null-pointer) :type #.(type-of (cffi:null-pointer)))
   (validity t))
 
+(defstruct (anonymous-type (:include wrapper)))
+
 (defun wrapper-valid-p (wrapper)
   (let ((v (wrapper-validity wrapper)))
     (etypecase v
