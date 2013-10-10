@@ -308,7 +308,9 @@ call it.  "
                              :bit-offset bit-offset
                              :bit-alignment bit-alignment
                              :bit-width bit-width)
-            (undefined-foreign-type (e) (declare (ignore e)) nil)))
+            (undefined-foreign-type (e)
+              (format *error-output* "~@<; ~@;~A~:@>~%" e)
+              nil)))
           into fields
         finally (return (delete-if #'null fields))))
 
