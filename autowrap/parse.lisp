@@ -223,12 +223,15 @@ Return the appropriate CFFI name."))
   (loop for field in fields
         collect
         (alist-bind (name type bit-size bit-offset bit-alignment) field
-          (list* (foreign-type-symbol name field-type *package*)
-                 `(,@(parse-type type (aval :tag type))
-                   ,@(when (eq field-type :cfield)
-                       `(:bit-size ,bit-size
-                         :bit-offset ,bit-offset
-                         :bit-alignment ,bit-alignment)))))))
+          (let ((symbol (foreign-type-symbol name field-type *package*)))
+            (when (symbol-package symbol)
+              (pushnew symbol *foreign-other-exports-list*))
+            (list* symbol
+                   `(,@(parse-type type (aval :tag type))
+                     ,@(when (eq field-type :cfield)
+                         `(:bit-size ,bit-size
+                           :bit-offset ,bit-offset
+                           :bit-alignment ,bit-alignment))))))))
 
 (defun parse-enum-fields (fields)
   (let* ((sorted-fields (sort (map 'vector (lambda (x) (aval :name x)) fields)
