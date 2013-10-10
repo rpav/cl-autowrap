@@ -7,7 +7,6 @@
 (defvar *foreign-types* (make-hash-table :test 'equal))
 (defvar *foreign-functions* (make-hash-table))
 (defvar *foreign-externs* (make-hash-table))
-(defvar *foreign-incomplete* (make-hash-table :test 'eq))
 
  ;; Temporary record indexing
 
@@ -234,8 +233,7 @@ name for the type will be `(:struct NAME)` or `(:union NAME)`, as
 appropriate."
   (assert (member type '(:struct :union)))
   (with-wrap-attempt ("define foreign ~A ~S" type name) name
-    (let* ((record (gethash name *foreign-incomplete*))
-           (incomplete-p record))
+    (let* ((record (gethash `(,type (,name)) *foreign-types*)))
       (unless record
         (setf record (make-instance 'foreign-record
                                     :name name
@@ -245,13 +243,9 @@ appropriate."
         (setf (foreign-record-bit-size record) bit-size))
       (unless (= 0 bit-alignment)
         (setf (foreign-record-bit-alignment record) bit-alignment))
-      (if (car field-list)
-          (progn
-            (setf (foreign-record-fields record)
-                  (parse-record-fields type name field-list))
-            (when incomplete-p
-              (remhash name *foreign-incomplete*)))
-          (setf (gethash name *foreign-incomplete*) record))
+      (when (car field-list)
+        (setf (foreign-record-fields record)
+              (parse-record-fields type name field-list)))
       record)))
 
 (defun define-foreign-enum (name id value-list)
@@ -298,22 +292,25 @@ call it.  "
                                                            name c-symbol (car param) (cadr param)))))
         (setf (gethash name *foreign-functions*) fun)))))
 
-(defun parse-record-fields (compound-type compound-type-name field-list)
+(defun parse-record-fields (record-type record-type-name field-list)
   (loop for field in field-list
         collect
         (destructuring-bind (name type &key bitfield-p bit-size bit-offset
                              bit-alignment bit-width)
             field
-          (make-instance 'foreign-record-field
-                         :name name
-                         :type (ensure-type type "define ~(~S~) ~S wrt. field ~S of type ~S" compound-type compound-type-name name type)
-                         :bitfield-p bitfield-p
-                         :bit-size bit-size
-                         :bit-offset bit-offset
-                         :bit-alignment bit-alignment
-                         :bit-width bit-width))
+          (handler-case
+              (make-instance 'foreign-record-field
+                             :name name
+                             :type (ensure-type type "define ~(~S~) ~S field ~S of type ~S"
+                                                record-type record-type-name name type)
+                             :bitfield-p bitfield-p
+                             :bit-size bit-size
+                             :bit-offset bit-offset
+                             :bit-alignment bit-alignment
+                             :bit-width bit-width)
+            (undefined-foreign-type (e) (declare (ignore e)) nil)))
           into fields
-        finally (return fields)))
+        finally (return (delete-if #'null fields))))
 
 (defun struct-or-union-p (name)
   (or (find-type `(:struct (,name)))
