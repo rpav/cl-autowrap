@@ -43,8 +43,12 @@
 
 (defclass foreign-pointer (foreign-type) ())
 (defclass foreign-alias (foreign-type) ())
-(defclass foreign-array (foreign-type)
+(defclass foreign-array (foreign-pointer)
   ((size :initarg :size :initform 0 :accessor foreign-array-size :type integer)))
+
+(defmethod print-object ((o foreign-pointer) s)
+  (print-unreadable-object (o s :type t :identity t)
+    (format s "TO-TYPE:~A" (foreign-type-name (foreign-type o)))))
 
 (defclass foreign-string (foreign-pointer)
   ((type :initform :char)))
@@ -643,8 +647,10 @@ types."
 
 (defun make-array-ref (field ref index)
   "`REF` must already refer to the field.  Use `MAKE-FIELD-REF` first."
-  (let ((size (foreign-type-size (basic-foreign-type (foreign-type field)))))
-    `(cffi-sys:inc-pointer ,ref ,(if (= size 1) index `(* ,size ,index)))))
+  (if (> index 0)
+      (let ((size (foreign-type-size (basic-foreign-type (foreign-type field)))))
+        `(cffi-sys:inc-pointer ,ref ,(if (= size 1) index `(* ,size ,index))))
+      ref))
 
 (defun make-field-deref (field ref)
   (let* ((type (or (basic-foreign-type (foreign-type field))
@@ -664,7 +670,9 @@ types."
     ;; In this case, REF should already contain the field, obviating
     ;; OFFSET
     (declare (ignore offset))
-    `(ash (logand ,mask ,(make-field-deref field ref)) ,back-shift)))
+    (if (= 0 back-shift)
+        `(logand ,mask ,(make-field-deref field ref))
+        `(ash (logand ,mask ,(make-field-deref field ref)) ,back-shift))))
 
 (defun make-bitfield-merge (field ref val)
   (multiple-value-bind (offset mask back-shift)
@@ -826,7 +834,9 @@ types."
 
 (defun alloc-ptr (type &optional (count 1))
   "Return a pointer allocated to the size of `TYPE`"
-  (cffi-sys:%foreign-alloc (* count (foreign-type-size type))))
+  (cffi-sys:%foreign-alloc
+   (* count (foreign-type-size
+             (require-type type "allocate an instance of foreign type ~S" type)))))
 
 (defun alloc (type &optional (count 1))
   "Return a foreign wrapper for `TYPE` with its pointer allocated.
