@@ -1,5 +1,7 @@
 # cl-autowrap
 
+**Now with cl-plus-c, see below!**
+
 This is a new [c2ffi](https://github.com/rpav/c2ffi)-based wrapper
 generator for Common Lisp with a focus, performance, convenience, and
 completeness.  It works like this:
@@ -58,6 +60,27 @@ the function names for disambiguation, this doesn't alter the reader):
   (foo-t.x[].s& foo 0)               ;; &(foo.x[0].s) => pointer
   (free-foo foo))
 ```
+
+Alternatively, there is now `cl-plus-c`, which can optionally be
+loaded for an alternate access mechanism:
+
+```lisp
+(asdf:load-system :cl-plus-c)
+(use-package :plus-c)
+
+;;; This allocates a FOO-T and frees it at the end:
+(c-let ((foo foo-t :free t))
+  (print foo)                        ;; => wrapper
+  (setf (foo :a) 5)                  ;; foo.a = 5;
+  (setf (foo :x 0 :b0) #b10)         ;; foo.x[0].b0 = 2;
+  (print (foo :x 1 :s :x))           ;; anonymous struct: foo.x[1].s.x
+  (foo :x 0 :s)                      ;; => child wrapper
+  (foo :x 0 :s &))                   ;; &(foo.x[0].s) => pointer
+```
+
+See
+[cl-plus-c.md](https://github.com/rpav/cl-autowrap/blob/master/cl-plus-c.md)
+for more information.
 
 ## Overview
 
