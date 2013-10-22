@@ -37,6 +37,9 @@
       object
       (error "Invalid type: ~S" object)))
 
+(defmethod foreign-type-name ((object wrapper))
+  (foreign-type-name (find-type (class-name (class-of object)))))
+
 (defmethod print-object ((o foreign-type) s)
   (print-unreadable-object (o s :type t :identity t)
     (format s "~A" (foreign-type-name o))))
