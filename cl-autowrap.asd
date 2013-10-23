@@ -19,7 +19,7 @@
    (:file "util")
    (:file "conditions")
    (:file "c2ffi")
-   (:file "sffi")
    (:file "wrapper")
+   (:file "sffi")
    (:file "parse")
    (:file "bitmask")))
