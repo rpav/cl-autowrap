@@ -880,14 +880,14 @@ Freeing is up to you!"
     (t (wrap-pointer (c-aptr wrapper index type) type wrapper))))
 
 (define-compiler-macro c-aptr (&whole whole wrapper index
-                                     &optional (type (foreign-type-name wrapper)))
+                                      &optional type)
   (if (constantp type)
       (let ((size (foreign-type-size (require-type (eval type) "index into array of elements of type ~S" type))))
         `(cffi-sys:inc-pointer (ptr ,wrapper) (* ,index ,size)))
       whole))
 
 (define-compiler-macro c-aref (&whole whole wrapper index
-                                      &optional (type (foreign-type-name wrapper)))
+                                      &optional type)
   (if (constantp type)
       (etypecase (eval type)
         (keyword
