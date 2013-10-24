@@ -49,8 +49,12 @@
    #:basic-foreign-type #:foreign-scalar-p #:foreign-type-size
    #:find-type #:ensure-type #:find-function #:find-extern
 
-   #:define-foreign-type #:define-foreign-extern #:define-foreign-alias
+   #:define-foreign-alias
+   #:define-foreign-enum
+   #:define-foreign-extern
    #:define-foreign-function
+   #:define-foreign-record
+   #:define-foreign-type
 
    #:bitfield-mask
    #:define-cfun #:define-cextern
