@@ -10,15 +10,13 @@
     (with-slots ((type autowrap::type)
                  (c-symbol autowrap::c-symbol)
                  (fields autowrap::fields)) fun
-      (autowrap::foreign-wrap-up
-       type fun
-       `(cffi-sys:%foreign-funcall ,c-symbol
-                                   (,@(loop for f in fields
-                                            for a in args
-                                            collect (basic-foreign-type f)
-                                            collect a)
-                                    ,@(nthcdr (length fields) args)
-                                    ,(basic-foreign-type type)))))
+      (autowrap::foreign-to-ffi
+       (and (car fields) (foreign-type (car fields)))
+       (and (car fields) (foreign-type-name (car fields)))
+       args fields
+       (autowrap::make-foreign-funcall
+        fun (when (foreign-function-variadic-p fun)
+              (nthcdr (length fields) args)))))
     (error 'c-unknown-function :name name)))
 
  ;; Refs
