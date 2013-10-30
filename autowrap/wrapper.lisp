@@ -28,7 +28,8 @@
     (wrapper
      (if (wrapper-valid-p wrapper)
          (wrapper-ptr wrapper)
-         (error 'invalid-wrapper :object wrapper)))))
+         (error 'invalid-wrapper :object wrapper)))
+    (null (cffi:null-pointer))))
 
 (defun valid-p (wrapper)
   (wrapper-valid-p wrapper))
