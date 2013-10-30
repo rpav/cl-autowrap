@@ -230,7 +230,7 @@
     (let ((extern (make-instance 'foreign-extern
                                  :name name
                                  :c-symbol c-symbol
-                                 :type (ensure-type type "define foreign extern ~S of type ~S" name type))))
+                                 :type (ensure-type type "extern ~S of type ~S" name type))))
       (setf (gethash name *foreign-externs*) extern))))
 
 (defun define-foreign-record (name type bit-size bit-alignment field-list)
@@ -239,7 +239,7 @@
 name for the type will be `(:struct NAME)` or `(:union NAME)`, as
 appropriate."
   (assert (member type '(:struct :union)))
-  (with-wrap-attempt ("define foreign ~A ~S" type name) name
+  (with-wrap-attempt ("record (~A (~S))" type name) name
     (let* ((record (gethash `(,type (,name)) *foreign-types*)))
       (unless record
         (setf record (make-instance 'foreign-record
@@ -274,7 +274,7 @@ symbol-to-integer mappings, `VALUE-LIST`."
     (define-foreign-type name
         (make-instance 'foreign-alias
                        :name name
-                       :type (ensure-type type "alias foreign type ~S to ~S" type name)))))
+                       :type (ensure-type type "alias of type ~S to ~S" type name)))))
 
 (defun define-foreign-function (name-and-options return-type params)
   "=> FOREIGN-FUNCTION
@@ -286,7 +286,7 @@ call it.  "
   (destructuring-bind (name c-symbol &key variadic-p &allow-other-keys)
       name-and-options
     (with-wrap-attempt () name
-      (let* ((return-type (ensure-type return-type "define function ~S (nee ~S) with return type ~S" name c-symbol return-type))
+      (let* ((return-type (ensure-type return-type "function ~S (nee ~S) with return type ~S" name c-symbol return-type))
              (fun (make-instance 'foreign-function
                                  :name name
                                  :c-symbol c-symbol
@@ -295,7 +295,7 @@ call it.  "
         (setf (foreign-record-fields fun)
               (loop for param in params
                  collect (make-instance 'foreign-field :name (car param)
-                                        :type (ensure-type (cadr param) "define function ~S (nee ~S) wrt. parameter ~S of type ~S"
+                                        :type (ensure-type (cadr param) "function ~S (nee ~S) due to parameter ~S of type ~S"
                                                            name c-symbol (car param) (cadr param)))))
         (setf (gethash name *foreign-functions*) fun)))))
 
@@ -308,7 +308,7 @@ call it.  "
           (handler-case
               (make-instance 'foreign-record-field
                              :name name
-                             :type (ensure-type type "define ~(~S~) ~S field ~S of type ~S"
+                             :type (ensure-type type "record ~(~S~) ~S field ~S of type ~S"
                                                 record-type record-type-name name type)
                              :bitfield-p bitfield-p
                              :bit-size bit-size
@@ -560,7 +560,7 @@ types."
 
 (defmacro define-cfun (name-or-function &optional (package *package*))
   (when-let ((fun (find-function name-or-function)))
-    (with-wrap-attempt ("define C function ~S" name-or-function) name-or-function
+    (with-wrap-attempt ("function ~S" name-or-function) name-or-function
       (with-slots (name type c-symbol fields) fun
         (let ((fun-name (intern (symbol-name name) package))
               (params (mapcar #'foreign-type-name fields)))
@@ -576,7 +576,7 @@ types."
                     (make-foreign-funcall ,!fun ,(when (foreign-function-variadic-p fun) rest))))))))))))
 
 (defmacro define-cextern (name &optional (package *package*))
-  (with-wrap-attempt ("define extern ~S" name) name
+  (with-wrap-attempt ("extern ~S" name) name
     (let* ((*package* package)
            (extern (find-extern name))
            (ptr-or-error
@@ -790,7 +790,7 @@ types."
                   (make-normal-accessor field accessor field-ref))))))
 
 (defmacro define-accessors (foreign-record &optional (package *package*))
-  (with-wrap-attempt ("define accessors for structure ~S" foreign-record) foreign-record
+  (with-wrap-attempt ("accessors for structure ~S" foreign-record) foreign-record
     (let ((*package* (find-package package))
           (foreign-record (etypecase foreign-record
                             (foreign-record foreign-record)
@@ -807,7 +807,7 @@ types."
             `(progn ,@(nreverse *accessor-forms*))))))))
 
 (defmacro define-wrapper (type &optional (package *package*))
-  (with-wrap-attempt ("define lisp structure for foreign structure ~S" type) type
+  (with-wrap-attempt ("lisp structure for foreign structure ~S" type) type
     (let* ((*package* package)
            (type (etypecase type
                    (foreign-type type)
@@ -919,7 +919,7 @@ aliases to be specified."
     ,name ,(basic-foreign-type return-type)
     ,(mapcar #'car lambda-list)
     ,(mapcar (lambda (x) (basic-foreign-type (ensure-type (cadr x)
-                                                          "define callback ~S, wrt. argument ~S of type ~S"
+                                                          "callback ~S, due to argument ~S of type ~S"
                                                           name (car x) (cadr x))))
              lambda-list)
     (progn ,@body)

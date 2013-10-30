@@ -20,7 +20,7 @@
              (with-slots (typespec
                           context-format-control
                           context-format-arguments) c
-               (apply #'format s (concatenate 'string "~@<Failure to " context-format-control " due to undefined foreign type: ~A~:@>")
+               (apply #'format s (concatenate 'string "~@<Note: skipping " context-format-control " due to undefined foreign type: ~A~:@>")
                       (append context-format-arguments (list typespec)))))))
 
 (define-condition sffi-condition () ())
@@ -43,7 +43,7 @@
   "A list of things whose absence caused other things to fail to wrap.")
 
 (defun report-wrap-failures (kind stream)
-  (format stream "; Total of ~D ~(~A~) wrap failures" (length *failed-wraps*) kind)
+  (format stream "; Total of ~D ~(~A~) skipped definitions" (length *failed-wraps*) kind)
   (if *failed-wraps*
       (format stream ":~%~@<;   ~@;~{~A ~}~:@>~%" (sort (copy-list *failed-wraps*) #'string<))
       (terpri stream))
