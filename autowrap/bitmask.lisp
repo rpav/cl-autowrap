@@ -72,17 +72,6 @@ for the bitmask called `NAME`.  Limited to 64 bits at the moment."
                  (setf value (logxor bit value))
                  (setf bit (ash 1 (ctz value)))))))
 
-(defun bitmask-symbols-to-alist (list &optional regex)
-  (let* ((scanner (ppcre:create-scanner "(\\W)(.*?)\\1"))
-         (trimmed-symbols
-           (mapcar (lambda (x)
-                     (ppcre:regex-replace scanner (string x) "\\2"))
-                   list))
-         (keyword-symbols (mapcar #'make-keyword (prefix-trim trimmed-symbols :regex regex))))
-    (loop for symbol in list
-          for keyword in keyword-symbols
-          collect ``(,',keyword . ,,symbol))))
-
 (defmacro define-bitmask-from-constants ((name &optional regex) &body values)
   "Define a bitmask `NAME` from a list of constants `VALUES`.  Each
 value should evaluate to actual values, e.g. actual `+CONSTANTS+`, or
@@ -91,7 +80,7 @@ it is by default pruned of any common prefix and made into a keyword.
 If a list is specified, the symbol given is used exactly."
   (let* ((just-symbols (remove-if #'consp values))
          (just-alist (remove-if #'symbolp values))
-         (symbol-values (bitmask-symbols-to-alist just-symbols regex)))
+         (symbol-values (trim-symbols-to-alist just-symbols regex)))
     `(define-bitmask ',name (list ,@symbol-values ,@just-alist))))
 
 (defmacro define-bitmask-from-enum ((name enum-name) &body values)

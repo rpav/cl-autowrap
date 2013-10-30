@@ -40,6 +40,19 @@
                      vars))
        ,@body)))
 
+ ;; Symbol trimming
+
+(defun trim-symbols-to-alist (list &optional regex)
+  (let* ((scanner (ppcre:create-scanner "(\\W)(.*?)\\1"))
+         (trimmed-symbols
+           (mapcar (lambda (x)
+                     (ppcre:regex-replace scanner (string x) "\\2"))
+                   list))
+         (keyword-symbols (mapcar #'make-keyword (prefix-trim trimmed-symbols :regex regex))))
+    (loop for symbol in list
+          for keyword in keyword-symbols
+          collect ``(,',keyword . ,,symbol))))
+
  ;; output
 
 (defun write-nicely (stream object)

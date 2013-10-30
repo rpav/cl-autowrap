@@ -257,7 +257,9 @@ appropriate."
 
 (defun define-foreign-enum (name id value-list)
   "Define a foreign enum given `NAME`, a symbol, and a list of
-symbol-to-integer mappings, `VALUE-LIST`."
+symbol-to-integer mappings, `VALUE-LIST`.  ID should be 0 unless
+anonymous-indexing is enabled and this will be later typedef'd
+by ID."
   ;; Type is somewhat irrelevant here; enums are always :int-sized and
   ;; a foreign-enum is always an :enum.
   (loop for value in value-list do
@@ -268,6 +270,20 @@ symbol-to-integer mappings, `VALUE-LIST`."
   (let ((enum (make-instance 'foreign-enum :name name :type :int
                                            :values value-list)))
     (define-foreign-type `(:enum (,name)) enum)))
+
+(defmacro define-enum-from-constants ((name &optional regex) &body values)
+  "Define an enum *and alias* `NAME` from a list of constants
+`VALUES`.  Each value should evaluate to actual values, e.g. actual
+`+CONSTANTS+`, or be a list in the form `'(SYMBOL VALUE)`.  If a
+symbol is given alone, it is by default pruned of any common prefix
+and made into a keyword.  If a list is specified, the symbol given is
+used exactly."
+  (let* ((just-symbols (remove-if #'consp values))
+         (just-alist (remove-if #'symbolp values))
+         (symbol-values (trim-symbols-to-alist just-symbols regex)))
+    `(progn
+       (define-foreign-enum ',name 0 (list ,@symbol-values ,@just-alist))
+       (define-foreign-alias ',name '(:enum (,name))))))
 
 (defun define-foreign-alias (name type)
   (with-wrap-attempt () name

@@ -56,6 +56,8 @@
    #:define-foreign-record
    #:define-foreign-type
 
+   #:define-enum-from-constants
+
    #:bitfield-mask
    #:define-cfun #:define-cextern
    #:define-accessors #:define-wrapper
