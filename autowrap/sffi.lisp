@@ -687,9 +687,12 @@ types."
         ref
         `(cffi-sys:inc-pointer ,ref ,offset))))
 
-(defun make-array-ref (field ref index)
+(defun make-array-ref (field-or-type ref index)
   "`REF` must already refer to the field.  Use `MAKE-FIELD-REF` first."
-  (let ((size (foreign-type-size (basic-foreign-type (foreign-type field)))))
+  (let ((size (foreign-type-size (basic-foreign-type
+                                  (if (symbolp field-or-type)
+                                      field-or-type
+                                      (foreign-type field-or-type))))))
     (if (or (symbolp index) (and (integerp index) (> index 0)))
         `(cffi-sys:inc-pointer ,ref ,(if (= size 1) index `(* ,size ,index)))
         ref)))
