@@ -1,6 +1,6 @@
 # cl-autowrap
 
-**Now with cl-plus-c, see below!**
+**Now with [cl-plus-c](https://github.com/rpav/cl-autowrap/blob/master/cl-plus-c.md)!**
 
 This is a new [c2ffi](https://github.com/rpav/c2ffi)-based wrapper
 generator for Common Lisp with a focus, performance, convenience, and
@@ -358,7 +358,13 @@ features:
   must provide your own pointer!)
 * For `char*` and `unsigned char*` returns, both a lisp string and a
   pointer are returned as `VALUES`, so you can free the pointer if
-  necessary.
+  necessary.  You may prevent this conversion, and receive only the
+  pointer, if you wrap the call in `INHIBIT-STRING-CONVERSION`:
+
+```lisp
+(inhibit-string-conversion (function-returning-string ...))
+  ;; => pointer
+```
 
 Otherwise, the call will be like any C call; there is no other type
 translation.  In my experience, all but the most trivial C functions
