@@ -95,7 +95,15 @@
 (defun find-type (typespec)
   (if (keywordp typespec)
       typespec
-      (gethash typespec *foreign-types*)))
+      (let ((type (gethash typespec *foreign-types*)))
+        (if (and (not type)
+                 (listp typespec)
+                 (eq :pointer (car typespec)))
+            (when-let (child-type (find-type (cadr typespec)))
+              (define-foreign-type
+                  typespec
+                  (make-instance 'foreign-pointer :type child-type)))
+            type))))
 
 (defun undefined-enum-value (value)
   (push `(:enum ,value) *wrap-failers*)
@@ -406,7 +414,7 @@ Create a type from `TYPESPEC` and return the `TYPE` structure representing it."
        (define-foreign-type '(:string) (make-instance 'foreign-string)))
       (:pointer
        (define-foreign-type
-           `(:pointer ,(cdr typespec))
+           `(:pointer ,(cadr typespec))
            (make-instance 'foreign-pointer :type (%ensure-type (cadr typespec) context-format-control context-format-args))))
       (:void :void))))
 
