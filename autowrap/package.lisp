@@ -62,6 +62,8 @@
    #:define-cfun #:define-cextern
    #:define-accessors #:define-wrapper
 
+   #:inhibit-string-conversion
+
    #:alloc-ptr #:alloc #:free #:with-alloc #:with-many-alloc
    #:c-aptr #:c-aref
 
@@ -88,6 +90,8 @@
    :autowrap
 
    #:ptr #:invalidate #:enum-value #:enum-key #:mask #:mask-apply #:mask-keywords
-   #:alloc-ptr #:alloc #:free #:with-alloc #:with-many-alloc #:defcallback #:callback)
+   #:alloc-ptr #:alloc #:free #:with-alloc #:with-many-alloc #:defcallback #:callback
+   #:inhibit-string-conversion)
   (:export #:ptr #:invalidate #:enum-value #:enum-key #:mask #:mask-apply #:mask-keywords
-           #:alloc-ptr #:alloc #:with-alloc #:with-many-alloc #:defcallback #:callback))
+           #:alloc-ptr #:alloc #:with-alloc #:with-many-alloc #:defcallback #:callback
+           #:inhibit-string-conversion))
