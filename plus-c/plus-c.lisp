@@ -166,8 +166,8 @@
                        (car bindings)
                      (if ptr
                          (if (keywordp c-type)
-                             `((symbol-macrolet ((,v `(mem-ref ,ptr ',c-type)))
-                                 ,@(rec (cdr bindings) rest)))
+                             `((let ((,tmp ,ptr))
+                                 ,@(maybe-make-macro bindings rest tmp v c-type)))
                              `((let ((,tmp (let ((,tmp (make-instance ',c-type)))
                                              (setf (autowrap::wrapper-ptr ,tmp) ,ptr)
                                              ,tmp)))
