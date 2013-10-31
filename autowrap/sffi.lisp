@@ -100,9 +100,7 @@
                  (listp typespec)
                  (eq :pointer (car typespec)))
             (when-let (child-type (find-type (cadr typespec)))
-              (define-foreign-type
-                  typespec
-                  (make-instance 'foreign-pointer :type child-type)))
+              (create-type-from-complex-typespec typespec ":pointer alias for ~S" typespec))
             type))))
 
 (defun undefined-enum-value (value)
@@ -387,6 +385,13 @@ Given `NAME-OR-TYPE`, return the field object called `FIELD-NAME`."
           (setf (foreign-anonymous id) sym)
           sym))))
 
+(defun looks-like-a-string (typespec)
+  (or (equal '(:string) typespec)
+      (and (eq :pointer (car typespec))
+           (atom (cadr typespec))
+           (find (basic-foreign-type (cadr typespec))
+                 '(:char :unsigned-char)))))
+
 (defun create-type-from-complex-typespec (typespec context-format-control context-format-args)
   "=> TYPE
 
@@ -415,7 +420,9 @@ Create a type from `TYPESPEC` and return the `TYPE` structure representing it."
       (:pointer
        (define-foreign-type
            `(:pointer ,(cadr typespec))
-           (make-instance 'foreign-pointer :type (%ensure-type (cadr typespec) context-format-control context-format-args))))
+           (if-let (basic-type (looks-like-a-string typespec))
+             (make-instance 'foreign-string :type basic-type)
+             (make-instance 'foreign-pointer :type (%ensure-type (cadr typespec) context-format-control context-format-args)))))
       (:void :void))))
 
  ;; Making Things
