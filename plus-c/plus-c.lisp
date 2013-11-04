@@ -155,7 +155,7 @@
 
  ;; c-let
 
-(defun make-bindings (bindings rest)
+(defun make-bindings (free-default bindings rest)
   (labels ((maybe-make-macro (bindings rest tmp v c-type)
              (with-gensyms (r)
                `((macrolet ((,v (&rest ,r)
@@ -167,7 +167,7 @@
            (rec (bindings rest)
              (if bindings
                  (with-gensyms (tmp)
-                   (destructuring-bind (v c-type &key (count 1) free ptr)
+                   (destructuring-bind (v c-type &key (count 1) (free free-default) ptr)
                        (car bindings)
                      (if ptr
                          (if (keywordp c-type)
@@ -186,7 +186,7 @@
     (first (rec bindings rest))))
 
 (defmacro c-let (bindings &body body)
-  (make-bindings bindings body :free-default nil))
+  (make-bindings nil bindings body))
 
 (defmacro c-with (bindings &body body)
-  (make-bindings bindings body :free-default t))
+  (make-bindings t bindings body))
