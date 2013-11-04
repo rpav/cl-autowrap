@@ -148,6 +148,11 @@
            (setf (autowrap::wrapper-validity ,v) ,*topmost-parent*)
            ,v))))
 
+(defmethod build-ref ((ref null) (type foreign-enum) current-ref rest)
+  (if *final-value-set*
+      `(cffi-sys:%mem-set ,*final-value-set* ,current-ref ,(foreign-type type))
+      `(cffi-sys:%mem-ref ,current-ref ,(foreign-type type))))
+
  ;; c-let
 
 (defun make-bindings (bindings rest)
