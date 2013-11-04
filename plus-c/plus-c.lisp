@@ -186,4 +186,7 @@
     (first (rec bindings rest))))
 
 (defmacro c-let (bindings &body body)
-  (make-bindings bindings body))
+  (make-bindings bindings body :free-default nil))
+
+(defmacro c-with (bindings &body body)
+  (make-bindings bindings body :free-default t))
