@@ -24,7 +24,7 @@ accessors, and allocation:
 
 * `c-fun`: Allows calling functions by symbol rather than as a macro
 * `c-ref`: Allows path-like dereferencing of types
-* `c-let`: Allows simple allocation and convenient access of "variables"
+* `c-let`/`c-with`: Allows simple allocation and convenient access of "variables"
 
 ## Functions
 
@@ -95,11 +95,11 @@ simply referencing things in C.  Be careful!
 
 ## Allocation
 
-For ultimate convenience, `cl-plus-c` defines `c-let`, which will let
-you define, set, and access values somewhat like C:
+For ultimate convenience, `cl-plus-c` defines `c-let`/`c-with`, which
+will let you define, set, and access values somewhat like C:
 
 ```lisp
-(c-let ((x :int :free t))
+(c-with ((x :int))                ;; same as c-let with :free T
   (print x)                       ;; => whatever value was in memory
   (setf x 42)
   (print (x &))                   ;; => &x (pointer)
@@ -120,6 +120,9 @@ You may specify one or more bindings, which are in the following form:
 * `ptr` is mutually exclusive with `alloc` and `free`.  Nothing will
   be allocated or freed; instead, the pointer specified will be used.
   This is useful when pointers from foreign code are acquired.
+
+`c-with` is essentially the same as `c-let`, but with the `free`
+argument defaulting to T.
 
 Inside the block:
 
