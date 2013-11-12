@@ -109,7 +109,7 @@ will let you define, set, and access values somewhat like C:
 You may specify one or more bindings, which are in the following form:
 
 ```lisp
-(NAME C-TYPE &key (alloc 1) free ptr)
+(NAME C-TYPE &key (alloc 1) free ptr from)
 ```
 
 * `alloc` will allocate 1 by default, you may make an array by
@@ -120,6 +120,9 @@ You may specify one or more bindings, which are in the following form:
 * `ptr` is mutually exclusive with `alloc` and `free`.  Nothing will
   be allocated or freed; instead, the pointer specified will be used.
   This is useful when pointers from foreign code are acquired.
+* `from` is similar to `ptr` (and should not be used with `ptr`),
+  except it takes an existing *wrapper* object and provides bindings
+  as above.
 
 `c-with` is essentially the same as `c-let`, but with the `free`
 argument defaulting to T.

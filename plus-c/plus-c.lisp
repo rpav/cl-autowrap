@@ -167,15 +167,18 @@
            (rec (bindings rest)
              (if bindings
                  (with-gensyms (tmp)
-                   (destructuring-bind (v c-type &key (count 1) (free free-default) ptr)
+                   (destructuring-bind (v c-type &key (count 1) (free free-default) ptr from)
                        (car bindings)
-                     (if ptr
+                     (if (or ptr from)
                          (if (keywordp c-type)
                              `((let ((,tmp ,ptr))
                                  ,@(maybe-make-macro bindings rest tmp v c-type)))
-                             `((let ((,tmp (let ((,tmp (make-instance ',c-type)))
-                                             (setf (autowrap::wrapper-ptr ,tmp) ,ptr)
-                                             ,tmp)))
+                             `((let ((,tmp
+                                       ,(if from
+                                            from
+                                            `(let ((,tmp (make-instance ',c-type)))
+                                               (setf (autowrap::wrapper-ptr ,tmp) ,ptr)
+                                               ,tmp))))
                                  ,@(maybe-make-macro bindings rest tmp v c-type))))
                          (if free
                              `((with-alloc (,tmp ',c-type ,count)
