@@ -749,14 +749,14 @@ types."
         *accessor-forms*)
   (push `(export ',accessor ,*package*) *accessor-forms*))
 
-(defun make-array-accessor (field accessor ref)
+(defun make-array-accessor (field type accessor ref)
   (let* ((index (symbolicate "I" (princ-to-string *accessor-index*)))
          (ref (make-array-ref field ref index))
          (*accessor-index* (1+ *accessor-index*))
          (*accessor-params* (list* index *accessor-params*)))
-    (if (or (typep (basic-foreign-type (foreign-type field)) 'foreign-record)
-            (eq (basic-foreign-type (foreign-type field)) :pointer))
-        (make-normal-type-accessor field (foreign-type (foreign-type field))
+    (if (or (typep (basic-foreign-type type) 'foreign-record)
+            (eq (basic-foreign-type type) :pointer))
+        (make-normal-type-accessor field (foreign-type type)
                                    accessor ref)
         (progn
           (push `(defun ,accessor (,@(accessor-params))
@@ -789,7 +789,7 @@ types."
 (defun make-normal-type-accessor (field type accessor ref)
   (cond
     ((typep type 'foreign-array)
-     (make-array-accessor field accessor ref))
+     (make-array-accessor field type accessor ref))
     ((typep type 'foreign-pointer)
      (make-simple-accessor field accessor ref)
      (cond
