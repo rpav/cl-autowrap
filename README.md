@@ -517,7 +517,7 @@ To facilitate doing this correctly, the `AUTOCOLLECT` macro has been
 added:
 
 ```lisp
-(autocollect WRAPPER-FORM (&optional PTR) &body) => WRAPPER-FORM-RESULT
+(autocollect (&optional PTR) WRAPPER-FORM &body) => WRAPPER-FORM-RESULT
 ```
 
 If you are using `trivial-garbage`, this will extract the pointer from
@@ -528,7 +528,8 @@ should use `POINTER` to free the object.  If you are not using
 For instance:
 
 ```lisp
-(autocollect (get-thing) (pointer)
+(autocollect (pointer)
+    (get-thing)
   (free-thing pointer)) ;; => THING-WRAPPER
 ```
 
