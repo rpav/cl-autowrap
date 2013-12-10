@@ -120,6 +120,13 @@
                  (cdr rest))
       (call-next-method)))
 
+(defmethod build-ref ((ref symbol) (type symbol) current-ref rest)
+  (if (keywordp type)
+      (build-ref (car rest) type
+                 (autowrap::make-array-ref type current-ref ref)
+                 (cdr rest))
+      (call-next-method)))
+
 (defmethod build-ref ((ref symbol) (type foreign-array) current-ref rest)
   (if (keywordp ref)
       (build-ref ref (foreign-type type)
