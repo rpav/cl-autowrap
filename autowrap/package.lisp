@@ -20,7 +20,7 @@
 
    #:make-wrapper #:wrapped-ptr #:wrapper-valid-p
    #:ptr #:valid-p #:invalidate
-   #:wrap-pointer
+   #:wrap-pointer #:wrapper-null-p
 
    #:autocollect
 
@@ -93,7 +93,7 @@
 
    #:ptr #:invalidate #:enum-value #:enum-key #:mask #:mask-apply #:mask-keywords
    #:alloc-ptr #:alloc #:free #:with-alloc #:with-many-alloc #:defcallback #:callback
-   #:inhibit-string-conversion #:autocollect)
+   #:inhibit-string-conversion #:autocollect #:wrapper-null-p)
   (:export #:ptr #:invalidate #:enum-value #:enum-key #:mask #:mask-apply #:mask-keywords
            #:alloc-ptr #:alloc #:with-alloc #:with-many-alloc #:defcallback #:callback
            #:inhibit-string-conversion #:autocollect))
