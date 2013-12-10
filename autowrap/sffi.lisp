@@ -886,7 +886,7 @@ types."
 (defun alloc (type &optional (count 1))
   "Return a foreign wrapper for `TYPE` with its pointer allocated.
 Freeing is up to you!"
-  (etypecase type
+  (etypecase (basic-foreign-type type)
     (keyword (alloc-ptr type count))
     (t (let ((wrapper (make-instance (foreign-type-name (require-type type "allocate a wrapper for an instance of foreign type ~S" type)))))
          (setf (wrapper-ptr wrapper)
