@@ -47,3 +47,16 @@
     (setf (wrapper-ptr child) pointer)
     (setf (wrapper-validity child) validity)
     child))
+
+(defmacro autocollect ((&optional (ptr (intern "PTR")))
+                       wrapper-form &body body)
+  (let* ((tg (find-package "TRIVIAL-GARBAGE"))
+         (finalize (when tg (find-symbol "FINALIZE" tg))))
+    (if (and tg finalize)
+        (once-only (wrapper-form)
+          `(let ((,ptr (ptr ,wrapper-form)))
+             (,finalize ,wrapper-form
+                        (lambda () ,@body))
+             ,wrapper-form))
+        (error "Trying to use AUTOCOLLECT without TRIVIAL-GARBAGE"))))
+

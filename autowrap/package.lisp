@@ -15,14 +15,16 @@
    #:simple-sffi-continuable-error
    #:invalid-wrapper
 
-   ;; Structs
+   ;; Wrapper
    #:wrapper #:anonymous-type
 
-   ;; Functions
    #:make-wrapper #:wrapped-ptr #:wrapper-valid-p
    #:ptr #:valid-p #:invalidate
    #:wrap-pointer
 
+   #:autocollect
+
+   ;; Autowrap itself
    #:parse #:parse-file
 
    ;; SFFI
@@ -91,7 +93,7 @@
 
    #:ptr #:invalidate #:enum-value #:enum-key #:mask #:mask-apply #:mask-keywords
    #:alloc-ptr #:alloc #:free #:with-alloc #:with-many-alloc #:defcallback #:callback
-   #:inhibit-string-conversion)
+   #:inhibit-string-conversion #:autocollect)
   (:export #:ptr #:invalidate #:enum-value #:enum-key #:mask #:mask-apply #:mask-keywords
            #:alloc-ptr #:alloc #:with-alloc #:with-many-alloc #:defcallback #:callback
-           #:inhibit-string-conversion))
+           #:inhibit-string-conversion #:autocollect))

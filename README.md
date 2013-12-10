@@ -435,7 +435,8 @@ still safe to use.
 ### Garbage Collection and Wrappers
 
 One of the primary motivators behind wrappers is the ability to easily
-garbage collect C data.  However, this still requires some care.
+garbage collect C data.  However, this still requires some care.  To
+this end, the `AUTOCOLLECT` macro has been added; see below.
 
 First, nothing besides checking is done automatically.  Pointers are
 assumed valid when they are returned and made into wrappers.  Any
@@ -511,6 +512,38 @@ This is both wrong and silly: there is a reference to `THING` in
 the finalizer, so it will never get freed.  And if you had gotten here
 normally, there would be *no* references, so nothing would have the
 dangling pointer!
+
+To facilitate doing this correctly, the `AUTOCOLLECT` macro has been
+added:
+
+```lisp
+(autocollect WRAPPER-FORM (&optional PTR) &body) => WRAPPER-FORM-RESULT
+```
+
+If you are using `trivial-garbage`, this will extract the pointer from
+`WRAPPER-FORM` and call `tg:finalize` on the wrapper.  The body forms
+should use `POINTER` to free the object.  If you are not using
+`trivial-garbage`, it will produce an error.
+
+For instance:
+
+```lisp
+(autocollect (get-thing) (pointer)
+  (free-thing pointer)) ;; => THING-WRAPPER
+```
+
+This will call `GET-THING` and finalize the resulting wrapper with the
+body.  `POINTER` is the pointer; this defaults to the symbol `PTR`.
+
+**This is not fool-proof.**  Things to watch out for:
+
+* If you reference the wrapper, and not the pointer, it will never be
+  collected.
+* If you try to autocollect a child wrapper, you will probably crash.
+* If you provide a function to manually free resources, *you must use*
+  `tg:cancel-finalization` or this finalizer will still be called,
+  likely double-freeing the memory and crashing.
+* It's still up to you to call something to free the pointer.
 
 ### Accessors
 
