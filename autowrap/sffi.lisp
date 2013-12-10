@@ -900,6 +900,10 @@ Freeing is up to you!"
     (invalidate object))
   (values))
 
+(declaim (inline sizeof))
+(defun sizeof (type)
+  (foreign-type-size type))
+
 (defmacro with-alloc ((name type &optional (count 1)) &body body)
   `(let ((,name (alloc ,type ,count)))
      (unwind-protect (progn ,@body)

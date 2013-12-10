@@ -67,7 +67,7 @@
    #:inhibit-string-conversion
 
    #:alloc-ptr #:alloc #:free #:with-alloc #:with-many-alloc
-   #:c-aptr #:c-aref
+   #:c-aptr #:c-aref #:sizeof
 
    #:defcallback #:callback
 
@@ -93,7 +93,7 @@
 
    #:ptr #:invalidate #:enum-value #:enum-key #:mask #:mask-apply #:mask-keywords
    #:alloc-ptr #:alloc #:free #:with-alloc #:with-many-alloc #:defcallback #:callback
-   #:inhibit-string-conversion #:autocollect #:wrapper-null-p)
+   #:inhibit-string-conversion #:autocollect #:wrapper-null-p #:sizeof)
   (:export #:ptr #:invalidate #:enum-value #:enum-key #:mask #:mask-apply #:mask-keywords
            #:alloc-ptr #:alloc #:with-alloc #:with-many-alloc #:defcallback #:callback
-           #:inhibit-string-conversion #:autocollect #:wrapper-null-p))
+           #:inhibit-string-conversion #:autocollect #:wrapper-null-p #:sizeof))
