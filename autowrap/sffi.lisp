@@ -225,6 +225,24 @@
       (call-next-method)
       (foreign-type-size (require-type type "determine the size of foreign type ~S" type))))
 
+(defgeneric unaliased-type (type)
+  (:documentation "Find the unaliased type for TYPE"))
+
+(defmethod unaliased-type (type) type)
+
+(defmethod unaliased-type ((type foreign-alias))
+  (foreign-unaliased-type (foreign-type type)))
+
+(defmethod unaliased-type ((type symbol))
+  (if (keywordp type)
+      (call-next-method)
+      (unaliased-type (require-type type "determine the unaliased type of ~S" type))))
+
+(defun builtin-type-p (type)
+  "Determine if TYPE is a builtin type (e.g., :char, :int, etc) or alias,
+vs anything else (including enums)."
+  (keywordp (unaliased-type type)))
+
  ;; Defining things
 
 (defun define-foreign-type (name type)
@@ -886,12 +904,12 @@ types."
 (defun alloc (type &optional (count 1))
   "Return a foreign wrapper for `TYPE` with its pointer allocated.
 Freeing is up to you!"
-  (etypecase (basic-foreign-type type)
-    (keyword (alloc-ptr type count))
-    (t (let ((wrapper (make-instance (foreign-type-name (require-type type "allocate a wrapper for an instance of foreign type ~S" type)))))
-         (setf (wrapper-ptr wrapper)
-               (alloc-ptr type count))
-         wrapper))))
+  (if (foreign-scalar-p type)
+      (alloc-ptr type count)
+      (let ((wrapper (make-instance (foreign-type-name (require-type type "allocate a wrapper for an instance of foreign type ~S" type)))))
+        (setf (wrapper-ptr wrapper)
+              (alloc-ptr type count))
+        wrapper)))
 
 (defun free (object)
   "Free WRAPPER via FOREIGN-FREE and invalidate."

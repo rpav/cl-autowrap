@@ -50,6 +50,7 @@
 
    #:basic-foreign-type #:foreign-scalar-p #:foreign-type-size
    #:find-type #:ensure-type #:find-function #:find-extern
+   #:unaliased-type #:builtin-type-p
 
    #:define-foreign-alias
    #:define-foreign-enum
