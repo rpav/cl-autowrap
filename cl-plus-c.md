@@ -86,6 +86,8 @@ We may access the various fields as follows:
 
 * `&` at the end of the form means "return the address of", so you
   can't set that
+* `string` at the end of a form means "convert this to a lisp string",
+  and can't be set
 * You may not set the value of a record directly
 
 **Safety note:** There isn't much safety here!  Nothing stops you from

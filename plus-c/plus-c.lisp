@@ -108,6 +108,11 @@
     (error "You may not take the address of a bitfield"))
   current-ref)
 
+(defmethod build-ref ((ref (eql 'string)) type current-ref rest)
+  (when rest
+    (error "STRING may only be used at the end of a ref"))
+  `(cffi:foreign-string-to-lisp ,current-ref))
+
 (defmethod build-ref ((ref integer) (type foreign-pointer) current-ref rest)
   (build-ref (car rest) (foreign-type type)
              (autowrap::make-array-ref type current-ref ref)
