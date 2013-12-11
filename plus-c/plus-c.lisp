@@ -84,16 +84,21 @@
               current-ref))))
 
 (defmethod build-ref ((ref symbol) (type foreign-record) current-ref rest)
-  (if-let (field (find-record-field type ref))
-    (if (frf-bitfield-p field)
-        (if *final-value-set*
-            (once-only (current-ref)
-              `(cffi-sys:%mem-set ,(autowrap::make-bitfield-merge field current-ref *final-value-set*)
-                                  ,current-ref ,(basic-foreign-type (foreign-type field))))
-            (autowrap::make-bitfield-deref field current-ref))
-        (build-ref (car rest) (foreign-type field)
-                   (autowrap::make-field-ref field current-ref) (cdr rest)))
-    (error 'c-unknown-field :type type :field ref)))
+  (if (keywordp ref)
+      (if-let (field (find-record-field type ref))
+        (if (frf-bitfield-p field)
+            (if *final-value-set*
+                (once-only (current-ref)
+                  `(cffi-sys:%mem-set ,(autowrap::make-bitfield-merge field current-ref *final-value-set*)
+                                      ,current-ref ,(basic-foreign-type (foreign-type field))))
+                (autowrap::make-bitfield-deref field current-ref))
+            (build-ref (car rest) (foreign-type field)
+                       (autowrap::make-field-ref field current-ref) (cdr rest)))
+        (error 'c-unknown-field :type type :field ref))
+      (build-ref (car rest) type
+                 `(cffi-sys:inc-pointer ,current-ref
+                                        (* ,(foreign-type-size type) ,ref))
+                 (cdr rest))))
 
 (defmethod build-ref ((ref (eql '*)) (type foreign-pointer)
                       current-ref rest)
