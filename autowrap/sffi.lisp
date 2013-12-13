@@ -231,7 +231,7 @@
 (defmethod unaliased-type (type) type)
 
 (defmethod unaliased-type ((type foreign-alias))
-  (foreign-unaliased-type (foreign-type type)))
+  (unaliased-type (foreign-type type)))
 
 (defmethod unaliased-type ((type symbol))
   (if (keywordp type)
