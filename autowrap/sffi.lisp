@@ -979,15 +979,16 @@ Freeing is up to you!"
 (defmacro defcallback (name return-type lambda-list &body body)
   "This acts much like CFFI:DEFCALLBACK except it allows SFFI type
 aliases to be specified."
-  `(cffi-sys:%defcallback
-    ,name ,(basic-foreign-type return-type)
-    ,(mapcar #'car lambda-list)
-    ,(mapcar (lambda (x) (basic-foreign-type (ensure-type (cadr x)
-                                                          "callback ~S, due to argument ~S of type ~S"
-                                                          name (car x) (cadr x))))
-             lambda-list)
-    (progn ,@body)
-    :convention :cdecl))
+  (let ((param-names (mapcar #'car lambda-list)))
+    `(cffi-sys:%defcallback
+      ,name ,(basic-foreign-type return-type)
+      ,param-names
+      ,(mapcar (lambda (x) (basic-foreign-type (ensure-type (cadr x)
+                                                            "callback ~S, due to argument ~S of type ~S"
+                                                            name (car x) (cadr x))))
+               lambda-list)
+      (funcall (lambda ,param-names ,@body) ,@param-names)
+      :convention :cdecl)))
 
 (defmacro callback (name)
   `(cffi-sys:%callback ,name))
