@@ -62,7 +62,7 @@ the function names for disambiguation, this doesn't alter the reader):
 ```
 
 Alternatively, there is now `cl-plus-c`, which can optionally be
-loaded for an alternate access mechanism:
+loaded for a different access mechanism:
 
 ```lisp
 (asdf:load-system :cl-plus-c)
