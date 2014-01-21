@@ -349,16 +349,17 @@ call it.  "
             field
           (handler-case
               (make-instance 'foreign-record-field
-                             :name name
-                             :type (ensure-type type "record ~(~S~) ~S field ~S of type ~S"
-                                                record-type record-type-name name type)
-                             :bitfield-p bitfield-p
-                             :bit-size bit-size
-                             :bit-offset bit-offset
-                             :bit-alignment bit-alignment
-                             :bit-width bit-width)
+                :name name
+                :type (ensure-type type "record ~(~S~) ~S field ~S of type ~S"
+                                   record-type record-type-name name type)
+                :bitfield-p bitfield-p
+                :bit-size bit-size
+                :bit-offset bit-offset
+                :bit-alignment bit-alignment
+                :bit-width bit-width)
             (undefined-foreign-type (e)
-              (format *error-output* "~@<; ~@;~A~:@>~%" e)
+              (unless *mute-reporting-p*
+                (format *error-output* "~@<; ~@;~A~:@>~%" e))
               nil)))
           into fields
         finally (return (delete-if #'null fields))))

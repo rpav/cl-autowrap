@@ -364,7 +364,8 @@ Return the appropriate CFFI name."))
                      (constant-package definition-package)
                      (extern-package accessor-package)
                      constant-accessor exclude-constants
-                     trace-c2ffi no-accessors no-functions)
+                     trace-c2ffi no-accessors no-functions
+                     release-p)
   (let ((*foreign-symbol-exceptions* (alist-hash-table symbol-exceptions :test 'equal))
         (*foreign-symbol-regex* (make-scanners symbol-regex))
         (*foreign-constant-excludes* (mapcar #'ppcre:create-scanner exclude-constants))
@@ -381,7 +382,8 @@ Return the appropriate CFFI name."))
         (accessor-package (find-package accessor-package))
         (constant-package (find-package constant-package))
         (extern-package (find-package extern-package))
-        (constant-name-value-map (gensym "CONSTANT-NAME-VALUE-MAP-")))
+        (constant-name-value-map (gensym "CONSTANT-NAME-VALUE-MAP-"))
+        (old-mute-reporting *mute-reporting-p*))
     (multiple-value-bind (spec-name)
         (let ((*trace-c2ffi* trace-c2ffi))
           (ensure-local-spec h-file
@@ -393,6 +395,7 @@ Return the appropriate CFFI name."))
           `(progn
              (eval-when (:compile-toplevel :load-toplevel :execute)
                (setf *failed-wraps* nil)
+               (setf *mute-reporting-p* ,release-p)
                ,@(when constant-accessor
                    (make-constant-accessor constant-accessor constant-name-value-map))
                ;; Read and parse the JSON
@@ -434,7 +437,9 @@ Return the appropriate CFFI name."))
                ,(when *foreign-constant-list*
                   (make-export-list *foreign-constant-list* constant-package))
                ,(when *foreign-other-exports-list*
-                  `(export ',*foreign-other-exports-list* ,definition-package)))
-             (eval-when (:load-toplevel :execute)
-               (report-wrap-failures 'load-time *standard-output*)
-               (clear-wrap-failures))))))))
+                  `(export ',*foreign-other-exports-list* ,definition-package))
+               (setf *mute-reporting-p* ,old-mute-reporting))
+             (let ((*mute-reporting-p* ,release-p))
+               (eval-when (:load-toplevel :execute)
+                 (report-wrap-failures 'load-time *standard-output*)
+                 (clear-wrap-failures)))))))))

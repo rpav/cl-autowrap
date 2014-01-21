@@ -42,16 +42,21 @@
 (defvar *wrap-failers* nil
   "A list of things whose absence caused other things to fail to wrap.")
 
+(defvar *mute-reporting-p* nil
+  "Definition-skipped reports tend to cause panic; set this to non-NIL to
+suppress them.")
+
 (defun report-wrap-failures (kind stream)
-  (format stream "; Total of ~D ~(~A~) skipped definitions" (length *failed-wraps*) kind)
-  (if *failed-wraps*
-      (format stream ":~%~@<;   ~@;~{~A ~}~:@>~%" (sort (copy-list *failed-wraps*) #'string<))
-      (terpri stream))
-  (let ((unique-failers (delete-duplicates (sort (mapcar #'prin1-to-string *wrap-failers*) #'string<) :test #'string=)))
-    (format stream "; Total of ~D ~(~A~) missing entities" (length unique-failers) kind)
-    (if unique-failers
-        (format stream ":~%~@<;   ~@;~{~A ~}~:@>~%" unique-failers)
-        (terpri stream))))
+  (unless *mute-reporting-p*
+    (format stream "; Total of ~D ~(~A~) skipped definitions" (length *failed-wraps*) kind)
+    (if *failed-wraps*
+        (format stream ":~%~@<;   ~@;~{~A ~}~:@>~%" (sort (copy-list *failed-wraps*) #'string<))
+        (terpri stream))
+    (let ((unique-failers (delete-duplicates (sort (mapcar #'prin1-to-string *wrap-failers*) #'string<) :test #'string=)))
+      (format stream "; Total of ~D ~(~A~) missing entities" (length unique-failers) kind)
+      (if unique-failers
+          (format stream ":~%~@<;   ~@;~{~A ~}~:@>~%" unique-failers)
+          (terpri stream)))))
 
 (defun clear-wrap-failures ()
   (setf *failed-wraps* nil)
@@ -63,14 +68,15 @@
 (defun call-with-wrap-attempt (wrappable-name fn format-control format-args)
   (handler-case (funcall fn)
     ((or autowrap-continuable-error sffi-continuable-error) (e)
-      (cond
-        (format-control
-         (apply #'format *error-output*
-                (concatenate 'string "~@<; ~@;Unable to " format-control " due to: ~:@>~%")
-                format-args)
-         (format *error-output* "~@<;   ~@;~A~:@>~%" e))
-        (t
-         (format *error-output* "~@<; ~@;~A~:@>~%" e)))
+      (unless *mute-reporting-p*
+        (cond
+          (format-control
+           (apply #'format *error-output*
+                  (concatenate 'string "~@<; ~@;Unable to " format-control " due to: ~:@>~%")
+                  format-args)
+           (format *error-output* "~@<;   ~@;~A~:@>~%" e))
+          (t
+           (format *error-output* "~@<; ~@;~A~:@>~%" e))))
       (push wrappable-name *failed-wraps*)
       nil)))
 
