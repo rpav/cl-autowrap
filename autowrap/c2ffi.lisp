@@ -38,6 +38,8 @@
 
  ;; c2ffi
 
+(defvar *c2ffi-program* "c2ffi")
+
 (defvar *trace-c2ffi* nil)
 
 (defun run-check (program args &key output)
@@ -48,7 +50,7 @@
 (defun c2ffi-p ()
   "This is a hack to determine if c2ffi exists; it assumes if it
 doesn't exist, we will get a return code other than 0."
-  (= 0 (nth-value 1 (external-program:run "c2ffi" '("-h")))))
+  (= 0 (nth-value 1 (external-program:run *c2ffi-program* '("-h")))))
 
 (defun write-c2ffi-tempfile (input-file macro-file)
   "Write a header including the given input-file and the macro-file
@@ -68,13 +70,13 @@ c2ffi will output.  Return the filename."
          (arch (when arch (list "-A" arch)))
          (sysincludes (loop for dir in sysincludes
                             append (list "-i" dir))))
-    (when (run-check "c2ffi" (list* include-file
+    (when (run-check *c2ffi-program* (list* include-file
                                     "-D" "null"
                                     "-M" output-h
                                     (append arch sysincludes))
                      :output *standard-output*)
       (prog1
-          (run-check "c2ffi" (list* include-file "-o" output-spec
+          (run-check *c2ffi-program* (list* include-file "-o" output-spec
                                     (append arch sysincludes))
                      :output *standard-output*)
         (delete-file output-h)
