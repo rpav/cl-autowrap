@@ -88,9 +88,9 @@ c2ffi will output.  Return the filename."
   "Return the path of the SPEC for this machine's architecture, or NIL
 if the file does not exist."
   (let* ((arch (local-arch))
-         (dir (pathname-directory spec-path))
          (name (pathname-name name))
-         (h-name (make-pathname :directory dir :name (string+ name "." arch)
+         (h-name (make-pathname :defaults spec-path
+                                :name (string+ name "." arch)
                                 :type "spec")))
     (when (probe-file h-name) h-name)))
 
