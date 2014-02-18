@@ -24,7 +24,7 @@
 (declaim (inline ptr valid-p))
 (defun ptr (wrapper)
   (etypecase wrapper
-    (#.(type-of (cffi:null-pointer)) wrapper)
+    (cffi:foreign-pointer wrapper)
     (wrapper
      (if (wrapper-valid-p wrapper)
          (wrapper-ptr wrapper)
