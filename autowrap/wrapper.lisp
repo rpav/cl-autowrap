@@ -8,9 +8,9 @@
 (declaim (inline make-wrapper wrapper-ptr))
 (defstruct wrapper
   #+(or cmucl ecl sbcl clisp)
-  (ptr (cffi:null-pointer) :type #.(type-of (cffi:null-pointer)))
+  (ptr (cffi:null-pointer) :type cffi:foreign-pointer)
   #+(or ccl allegro)
-  (ptr #.(cffi:null-pointer) :type #.(type-of (cffi:null-pointer)))
+  (ptr #.(cffi:null-pointer) :type cffi:foreign-pointer)
   (validity t))
 
 (defstruct (anonymous-type (:include wrapper)))
