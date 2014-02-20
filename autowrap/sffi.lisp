@@ -42,6 +42,16 @@
 (defmethod foreign-type-name ((object wrapper))
   (foreign-type-name (find-type (class-name (class-of object)))))
 
+(defgeneric foreign-type-constructor (foreign-type)
+  (:documentation "Return the wrapper constructor function for `FOREIGN-TYPE`"))
+
+(defmethod foreign-type-constructor ((object foreign-type))
+  (let ((sym (foreign-type-name object)))
+    (find-symbol (with-standard-io-syntax (format nil "MAKE-~A" sym))
+                 (if (anonymous-p object)
+                     *package*
+                     (symbol-package sym)))))
+
 (defmethod print-object ((o foreign-type) s)
   (print-unreadable-object (o s :type t :identity t)
     (format s "~A" (foreign-type-name o))))
@@ -798,7 +808,7 @@ types."
   (with-gensyms (v)
     (push `(defun ,accessor (,@(accessor-params))
              ,*accessor-declare*
-             (let ((,v (make-instance ',(foreign-type-name type))))
+             (let ((,v (,(foreign-type-constructor type))))
                (setf (wrapper-ptr ,v) ,ref)
                (setf (wrapper-validity ,v) ,parent)
                ,v))
@@ -907,7 +917,9 @@ types."
 Freeing is up to you!"
   (if (foreign-scalar-p type)
       (alloc-ptr type count)
-      (let ((wrapper (make-instance (foreign-type-name (require-type type "allocate a wrapper for an instance of foreign type ~S" type)))))
+      (let ((wrapper (funcall
+                      (foreign-type-constructor
+                       (require-type type "allocate a wrapper for an instance of foreign type ~S" type)))))
         (setf (wrapper-ptr wrapper)
               (alloc-ptr type count))
         wrapper)))
