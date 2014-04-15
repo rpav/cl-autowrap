@@ -170,6 +170,11 @@
       `(cffi-sys:%mem-set ,*final-value-set* ,current-ref ,(foreign-type type))
       `(cffi-sys:%mem-ref ,current-ref ,(foreign-type type))))
 
+(defmethod build-ref ((ref null) (type foreign-array) current-ref rest)
+  (if *final-value-set*
+      `(cffi-sys:%mem-set ,*final-value-set* ,current-ref ,(foreign-type type))
+      `(cffi-sys:%mem-ref ,current-ref ,(foreign-type type))))
+
  ;; c-let
 
 (defun make-bindings (free-default bindings rest)
