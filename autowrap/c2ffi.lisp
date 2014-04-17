@@ -23,7 +23,8 @@
   #+darwin "-darwin9")
 
 (defun local-environment ()
-  #+linux "-gnu")
+  #+linux "-gnu"
+  #-linux "")
 
 (defun local-arch ()
   (string+ (local-cpu) (local-vendor) (local-os) (local-environment)))
