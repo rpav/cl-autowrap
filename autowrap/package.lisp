@@ -65,7 +65,7 @@
 
    #:bitfield-mask
    #:define-cfun #:define-cextern
-   #:define-accessors #:define-wrapper
+   #:define-accessors #:define-wrapper #:define-wrapper*
 
    #:inhibit-string-conversion
 

@@ -870,9 +870,16 @@ types."
             `(progn ,@(nreverse *accessor-forms*))))))))
 
 (defmacro define-wrapper (type &optional (package *package*))
+  (let* ((*package* package)
+         (type (etypecase type
+                 (foreign-type type)
+                 ((or symbol cons) (require-type-no-context type))))
+         (name (foreign-type-name type)))
+    `(define-wrapper* ,type ,name)))
+
+(defmacro define-wrapper* (type wrapper-name &key constructor conc-name)
   (with-wrap-attempt ("lisp structure for foreign structure ~S" type) type
-    (let* ((*package* package)
-           (type (etypecase type
+    (let* ((type (etypecase type
                    (foreign-type type)
                    ((or symbol cons) (require-type-no-context type))))
            ;; Note this is a bit of a hack because the following is valid
@@ -886,13 +893,18 @@ types."
            (star-p (and existing (typep type 'foreign-pointer)))
            ;; FIXME: These should be given a separate name, but this has
            ;; to be deduced _everywhere_.
-           (name (foreign-type-name type))
-           (constructor-name (intern (string+ "MAKE-" name) *package*))
-           (conc-name (gensym (string+ name "-"))))
+           (constructor-name
+             (or constructor
+                 (intern (string+ "MAKE-" wrapper-name)
+                         (symbol-package wrapper-name))))
+           (conc-name
+             (or conc-name
+                 (string+ wrapper-name "-"))))
       (when (or (not existing) star-p)
         `(progn
-           (setf (gethash ',name *wrapper-constructors*) ',constructor-name)
-           (defstruct (,name
+           (setf (gethash ',(foreign-type-name type) *wrapper-constructors*)
+                 ',constructor-name)
+           (defstruct (,wrapper-name
                        (:constructor ,constructor-name)
                        (:conc-name ,conc-name)
                        (:include ,(if (or (keywordp (foreign-type type))
