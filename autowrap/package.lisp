@@ -22,6 +22,8 @@
    #:ptr #:valid-p #:invalidate
    #:wrap-pointer #:wrapper-null-p
 
+   #:make-wrapper-instance
+
    #:autocollect
 
    ;; Autowrap itself

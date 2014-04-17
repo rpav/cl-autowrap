@@ -10,6 +10,8 @@
 
 (defvar *inhibit-string-conversion* nil)
 
+(defvar *wrapper-constructors* (make-hash-table))
+
  ;; Temporary record indexing
 
 (defvar *foreign-record-index* nil)
@@ -884,15 +886,20 @@ types."
            (star-p (and existing (typep type 'foreign-pointer)))
            ;; FIXME: These should be given a separate name, but this has
            ;; to be deduced _everywhere_.
-           (name (foreign-type-name type)))
+           (name (foreign-type-name type))
+           (constructor-name (intern (string+ "MAKE-" name) *package*))
+           (conc-name (gensym (string+ name "-"))))
       (when (or (not existing) star-p)
-        `(defstruct (,name
-                      (:include ,(if (or (keywordp (foreign-type type))
-                                         (anonymous-p (foreign-type type))
-                                         (null (foreign-type-name (foreign-type type))))
-                                     'wrapper
-                                     (foreign-type-name (foreign-type type))))))))))
-
+        `(progn
+           (setf (gethash ',name *wrapper-constructors*) ',constructor-name)
+           (defstruct (,name
+                       (:constructor ,constructor-name)
+                       (:conc-name ,conc-name)
+                       (:include ,(if (or (keywordp (foreign-type type))
+                                          (anonymous-p (foreign-type type))
+                                          (null (foreign-type-name (foreign-type type))))
+                                      'wrapper
+                                      (foreign-type-name (foreign-type type)))))))))))
 
  ;; Allocating things
 
@@ -907,7 +914,7 @@ types."
 Freeing is up to you!"
   (if (foreign-scalar-p type)
       (alloc-ptr type count)
-      (let ((wrapper (make-instance (foreign-type-name (require-type type "allocate a wrapper for an instance of foreign type ~S" type)))))
+      (let ((wrapper (make-wrapper-instance (foreign-type-name (require-type type "allocate a wrapper for an instance of foreign type ~S" type)))))
         (setf (wrapper-ptr wrapper)
               (alloc-ptr type count))
         wrapper)))

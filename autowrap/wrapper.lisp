@@ -63,3 +63,6 @@
              ,wrapper-form))
         (error "Trying to use AUTOCOLLECT without TRIVIAL-GARBAGE"))))
 
+(defun make-wrapper-instance (type-name &rest args)
+  (let ((fun (gethash type-name *wrapper-constructors*)))
+    (apply fun args)))
