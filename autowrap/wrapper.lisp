@@ -3,6 +3,8 @@
 (defvar *definition-circles* nil
   "Detect circular type members")
 
+(defvar *wrapper-constructors* (make-hash-table))
+
  ;; Wrappers
 
 (declaim (inline make-wrapper wrapper-ptr))

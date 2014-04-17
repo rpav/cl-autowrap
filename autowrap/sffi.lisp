@@ -10,8 +10,6 @@
 
 (defvar *inhibit-string-conversion* nil)
 
-(defvar *wrapper-constructors* (make-hash-table))
-
  ;; Temporary record indexing
 
 (defvar *foreign-record-index* nil)
