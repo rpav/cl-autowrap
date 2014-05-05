@@ -3,14 +3,16 @@
 (defvar *definition-circles* nil
   "Detect circular type members")
 
+(defvar *wrapper-constructors* (make-hash-table))
+
  ;; Wrappers
 
 (declaim (inline make-wrapper wrapper-ptr))
 (defstruct wrapper
   #+(or cmucl ecl sbcl clisp)
-  (ptr (cffi:null-pointer) :type #.(type-of (cffi:null-pointer)))
+  (ptr (cffi:null-pointer) :type cffi:foreign-pointer)
   #+(or ccl allegro)
-  (ptr #.(cffi:null-pointer) :type #.(type-of (cffi:null-pointer)))
+  (ptr #.(cffi:null-pointer) :type cffi:foreign-pointer)
   (validity t))
 
 (defstruct (anonymous-type (:include wrapper)))
@@ -63,3 +65,6 @@
              ,wrapper-form))
         (error "Trying to use AUTOCOLLECT without TRIVIAL-GARBAGE"))))
 
+(defun make-wrapper-instance (type-name &rest args)
+  (let ((fun (gethash type-name *wrapper-constructors*)))
+    (apply fun args)))

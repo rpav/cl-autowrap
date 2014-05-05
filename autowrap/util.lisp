@@ -12,7 +12,8 @@
 
 (declaim (inline string+))
 (defun string+ (string &rest strings)
-  (apply #'concatenate 'string string strings))
+  (apply #'concatenate 'string (string string)
+         (mapcar #'string strings)))
 
 (defun prefix-trim (list &key (pred 'string) regex)
   (if regex
