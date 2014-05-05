@@ -21,10 +21,14 @@
   (remhash name *foreign-bitmasks*))
 
 (defun mask-symbol-value (mask symbol)
-  (or (aval symbol mask)
-      (progn
-        (warn "Unknown mask symbol ~S, treated as 0" symbol)
-        0)))
+  (etypecase symbol
+    (integer symbol)
+    (symbol
+     (or (aval symbol mask)
+         (progn
+           (warn "Unknown mask symbol ~S, treated as 0; expected one of:~%  ~S"
+                 symbol (sort (mapcar #'car mask) #'string<))
+           0)))))
 
 (defun mask (name &rest symbols)
   "Create a mask by `LOGIOR` using the *list* of symbols `SYMBOLS`
