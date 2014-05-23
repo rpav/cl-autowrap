@@ -992,6 +992,28 @@ Freeing is up to you!"
                     ,v)))
       whole))
 
+ ;; Functions
+
+(defun foreign-function (function-name)
+  "Return a lambda which calls function `FUNCTION-NAME`.  This is
+useful if you need to funcall foreign functions (which is quite handy!),
+since CFFI-SYS and thus SFFI use macros for ordinary calls."
+  (if-let ((fun (find-function function-name)))
+    (with-slots (type c-symbol fields) fun
+      (let ((args (mapcar (lambda (x)
+                            (intern (symbol-name (foreign-type-name x))))
+                          fields)))
+        (eval
+         `(lambda ,args
+            ,(foreign-to-ffi
+              (and (car fields) (foreign-type (car fields)))
+              (and (car fields) (foreign-type-name (car fields)))
+              args fields
+              (autowrap::make-foreign-funcall
+               fun (when (foreign-function-variadic-p fun)
+                     (nthcdr (length fields) args))))))))
+    (error "Unknown function: ~S" function-name)))
+
  ;; Callbacks
 
 (defmacro defcallback (name return-type lambda-list &body body)
