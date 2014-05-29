@@ -992,9 +992,10 @@ Freeing is up to you!"
 (define-compiler-macro (setf c-aref) (&whole whole v ptr index type)
   (if (constantp type)
       (etypecase (eval type)
-        (keyword `(once-only (v)
-                    (cffi-sys:%mem-set ,v (c-aptr ,ptr ,index ,type) ,type)
-                    ,v)))
+        (keyword (once-only (v)
+                   `(progn
+                      (cffi-sys:%mem-set ,v (c-aptr ,ptr ,index ,type) ,type)
+                      ,v))))
       whole))
 
  ;; Functions
