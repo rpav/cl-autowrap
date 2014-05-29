@@ -98,9 +98,13 @@ if the file does not exist."
 (defun ensure-local-spec (name &key
                           (spec-path *default-pathname-defaults*)
                           arch-excludes
-                          sysincludes)
+                          sysincludes
+                          version)
   (flet ((spec-path (arch) (string+ (namestring spec-path)
                                     (pathname-name name)
+                                    (if version
+                                        (string+ "-" version)
+                                        "")
                                     "." arch)))
     (multiple-value-bind (h-name m-name) (find-local-spec name spec-path)
       (if h-name

@@ -1,6 +1,7 @@
 (in-package :autowrap)
 
 (defvar *foreign-type-symbol-function* 'default-foreign-type-symbol)
+(defvar *foreign-c-to-lisp-function* 'default-c-to-lisp)
 (defvar *foreign-record-list* nil)
 (defvar *foreign-alias-list* nil)
 (defvar *foreign-function-list* nil)
@@ -24,10 +25,14 @@
 
 (defun apply-regexps (string regex-list)
   (loop for r in regex-list do
-    (multiple-value-bind (match matches)
-        (ppcre:scan-to-strings (car r) string)
-      (when (and match (functionp (cdr r)))
-        (setf string (funcall (cdr r) string matches (car r))))))
+    (cond
+      ((functionp (cdr r))
+       (multiple-value-bind (match matches)
+           (ppcre:scan-to-strings (car r) string)
+         (when match
+           (setf string (funcall (cdr r) string matches (car r))))))
+      ((stringp (cdr r))
+       (setf string (ppcre:regex-replace-all (car r) string (cdr r))))))
   string)
 
 (defun default-c-to-lisp (string)
@@ -38,23 +43,22 @@
           (nstring-upcase (nsubstitute #\- #\_ string))))))
 
 (defun default-foreign-type-symbol (string type package)
-  (let ((string (if *foreign-symbol-regex*
-                    (apply-regexps string *foreign-symbol-regex*)
-                    string)))
-    (let ((string
-            (or (and *foreign-symbol-exceptions*
-                     (gethash string *foreign-symbol-exceptions*))
-                (default-c-to-lisp string))))
-      (if (eq #\: (aref string 0))
-          (alexandria:make-keyword (subseq string 1))
-          (cond
-            ((eq type :cconst)
-             (intern (format nil "+~A+" string) package))
-            ((eq type :cenumfield)
-             (alexandria:make-keyword string))
-            ((eq type :cfield)
-             (alexandria:make-keyword string))
-            (t (intern string package)))))))
+  (let ((string (or (and *foreign-symbol-exceptions*
+                         (gethash string *foreign-symbol-exceptions*))
+                    (funcall *foreign-c-to-lisp-function*
+                             (if *foreign-symbol-regex*
+                                 (apply-regexps string *foreign-symbol-regex*)
+                                 string)))))
+    (if (eq #\: (aref string 0))
+        (alexandria:make-keyword (subseq string 1))
+        (cond
+          ((eq type :cconst)
+           (intern (format nil "+~A+" string) package))
+          ((eq type :cenumfield)
+           (alexandria:make-keyword string))
+          ((eq type :cfield)
+           (alexandria:make-keyword string))
+          (t (intern string package))))))
 
 (defun foreign-type-symbol (string type package)
   (if (string= "" string)
@@ -234,15 +238,25 @@ Return the appropriate CFFI name."))
                            :bit-alignment ,bit-alignment))))))))
 
 (defun parse-enum-fields (fields)
-  (let* ((sorted-fields (sort (map 'vector (lambda (x) (aval :name x)) fields)
-                              #'string<))
-         (first (elt sorted-fields 0))
-         (last (elt sorted-fields (1- (or (length sorted-fields) 1))))
-         (prefix-end (when (and first last) (mismatch first last))))
+  (let* ((type-symbol-fields
+           (map 'vector
+                (lambda (x)
+                  (symbol-name
+                   (foreign-type-symbol (aval :name x)
+                                        :cenumfield
+                                        *package*)))
+                fields))
+         (prefix-end (find-prefix type-symbol-fields))
+         ;; Notably, this is actually the start _from the end_
+         (suffix-start (find-prefix (map 'vector #'reverse type-symbol-fields))))
     (loop for field in fields
-          as name = (aval :name field)
-          collect (cons (foreign-type-symbol (if prefix-end (subseq name prefix-end) name)
-                                             :cenumfield *package*)
+          as name = (foreign-type-symbol (aval :name field)
+                                         :cenumfield *package*)
+          as string = (symbol-name name)
+          as truncated = (substr* string prefix-end
+                                  (- (length string) suffix-start))
+          collect (cons (intern truncated
+                                (symbol-package name))
                         (aval :value field)))))
 
 (defun parse-enum-to-const (fields)
@@ -315,12 +329,17 @@ Return the appropriate CFFI name."))
                   (eval (caddr x))))
           list))
 
-(defun read-parse-forms (in-spec exclude-definitions exclude-sources include-sources)
+(defun read-parse-forms (in-spec exclude-definitions exclude-sources
+                         include-definitions include-sources)
   (loop for form in (read-json in-spec)
-        unless (or (included-p (aval :name form) exclude-definitions)
-                   (and (included-p (aval :location form) exclude-sources)
-                        (not (included-p (aval :location form) include-sources))))
-          collect (parse-form form (aval :tag form))))
+        as name = (aval :name form)
+        as location = (aval :location form)
+        unless
+        (and (or (included-p name exclude-definitions)
+                 (included-p location exclude-sources))
+             (not (or (included-p name include-definitions)
+                      (included-p location include-sources))))
+        collect (parse-form form (aval :tag form))))
 
 (defun make-define-list (def-symbol list package)
  (loop for x in (reverse list)
@@ -355,7 +374,7 @@ Return the appropriate CFFI name."))
 (defmacro c-include (h-file &key (spec-path *default-pathname-defaults*)
                      symbol-exceptions symbol-regex
                      exclude-definitions exclude-sources exclude-arch
-                     include-sources
+                     include-definitions include-sources
                      sysincludes
                      (definition-package *package*)
                      (function-package definition-package)
@@ -365,11 +384,18 @@ Return the appropriate CFFI name."))
                      (extern-package accessor-package)
                      constant-accessor exclude-constants
                      trace-c2ffi no-accessors no-functions
-                     release-p)
+                     release-p version
+                     type-symbol-function c-to-lisp-function)
   (let ((*foreign-symbol-exceptions* (alist-hash-table symbol-exceptions :test 'equal))
         (*foreign-symbol-regex* (make-scanners symbol-regex))
         (*foreign-constant-excludes* (mapcar #'ppcre:create-scanner exclude-constants))
         (*foreign-raw-constant-list*)
+        (*foreign-type-symbol-function* (or (and type-symbol-function
+                                                 (eval type-symbol-function))
+                                            *foreign-type-symbol-function*))
+        (*foreign-c-to-lisp-function* (or (and c-to-lisp-function
+                                               (eval c-to-lisp-function))
+                                          *foreign-c-to-lisp-function*))
         (exclude-definitions (mapcar #'ppcre:create-scanner exclude-definitions))
         (exclude-sources (mapcar #'ppcre:create-scanner exclude-sources))
         (*package* (find-package definition-package))
@@ -389,7 +415,8 @@ Return the appropriate CFFI name."))
           (ensure-local-spec h-file
                              :spec-path spec-path
                              :arch-excludes exclude-arch
-                             :sysincludes sysincludes))
+                             :sysincludes sysincludes
+                             :version version))
       (with-open-file (in-spec spec-name)
         (collecting-symbols
           `(progn
@@ -404,11 +431,13 @@ Return the appropriate CFFI name."))
                ;; being a toplevel form as of 1.1.9 and will crash.
                #-sbcl
                (with-anonymous-indexing
-                 ,@(read-parse-forms in-spec exclude-definitions exclude-sources include-sources))
+                 ,@(read-parse-forms in-spec exclude-definitions exclude-sources
+                                     include-definitions include-sources))
                #+sbcl
                (progn
                  (setf *foreign-record-index* (make-hash-table))
-                 ,@(read-parse-forms in-spec exclude-definitions exclude-sources include-sources)
+                 ,@(read-parse-forms in-spec exclude-definitions exclude-sources
+                                     include-definitions include-sources)
                  (setf *foreign-record-index* nil))
                ;; Map constants
                ,@(when constant-accessor

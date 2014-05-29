@@ -94,4 +94,3 @@ values, `VALUES`.  (A foreign-alias of an enum may also be
 specified.)"
   (let ((enum-values (foreign-enum-values (find-type enum-name))))
     `(define-bitmask ',name `(,@',enum-values ,,@values))))
-

@@ -220,6 +220,9 @@
   (* (foreign-type-size (foreign-type type))
      (foreign-array-size type)))
 
+(defmethod foreign-type-size ((type foreign-pointer))
+  (foreign-type-size :pointer))
+
 (defmethod foreign-type-size ((type symbol))
   (if (keywordp type)
       (call-next-method)

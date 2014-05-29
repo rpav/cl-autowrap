@@ -29,6 +29,11 @@
    ;; Autowrap itself
    #:parse #:parse-file
 
+   #:*foreign-type-symbol-function*
+   #:*foreign-c-to-lisp-function*
+   #:default-foreign-type-symbol
+   #:default-c-to-lisp
+
    ;; SFFI
    #:foreign-type #:foreign-type-name #:basic-foreign-type
 
