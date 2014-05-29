@@ -205,7 +205,9 @@
   (cffi-sys:%foreign-type-size type))
 
 (defmethod foreign-type-size ((type foreign-record))
-  (truncate (foreign-record-bit-size type) 8))
+  (if-let ((bit-size (foreign-record-bit-size type)))
+    (truncate bit-size 8)
+    (error 'incomplete-type :type type)))
 
 (defmethod foreign-type-size ((type foreign-enum))
   (foreign-type-size (foreign-type type)))

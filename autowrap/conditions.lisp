@@ -28,6 +28,13 @@
 (define-condition sffi-continuable-error (sffi-error) ())
 (define-simple-error-for sffi-continuable-error)
 
+(define-condition incomplete-type (sffi-error)
+  ((type :initarg :type :initform nil :accessor incomplete-type-type))
+  (:report (lambda (c s)
+             (with-slots (type) c
+               (format s "FOREIGN-TYPE-SIZE for incomplete type ~S is undefined."
+                       (foreign-type-name type))))))
+
 (define-condition invalid-wrapper (sffi-error)
   ((object :initarg :object :initform nil :accessor invalid-pointer-object))
   (:report (lambda (c s)
