@@ -73,6 +73,13 @@
 (defmethod build-ref (ref (type foreign-alias) current-ref rest)
   (build-ref ref (foreign-type type) current-ref rest))
 
+(defmethod build-ref ((ref integer) (type foreign-alias) current-ref rest)
+  (if (typep (foreign-type type) 'foreign-pointer)
+      (build-ref (car rest) (foreign-type type)
+             (autowrap::make-array-ref type current-ref ref)
+             (cdr rest))
+      (call-next-method)))
+
 (defmethod build-ref (ref (type foreign-pointer) current-ref rest)
   (if rest
       (build-ref (car rest) type current-ref (cdr rest))
