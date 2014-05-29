@@ -75,6 +75,12 @@
              ,wrapper))
         (error "Trying to use CANCEL-FINALIZATION without TRIVIAL-GARBAGE"))))
 
+(defmacro making-autocollect-instance ((ptr-var type-name) pointer-form
+                                       &body cleanup-body)
+  `(autocollect (,ptr-var)
+       (autowrap:make-wrapper-instance ',type-name :ptr ,pointer-form)
+     ,@cleanup-body))
+
 (defmacro with-autocollect-cancel ((wrapper &key (invalidate-p t)) &body body)
   "Run `BODY`, and (by default, with `:invalidate-p` as `T`)
 invalidate `WRAPPER`.  This is protected; a non-local exit from `BODY`
