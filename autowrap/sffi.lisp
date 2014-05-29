@@ -578,7 +578,7 @@ types."
   (with-gensyms (ptr)
     `(let ((,ptr ,body))
        (if *inhibit-string-conversion*
-           ,ptr
+           (values "" ,ptr)
            (values
             (cffi:foreign-string-to-lisp ,ptr)
             ,ptr)))))
