@@ -65,6 +65,29 @@
              ,wrapper-form))
         (error "Trying to use AUTOCOLLECT without TRIVIAL-GARBAGE"))))
 
+(defmacro autocollect-cancel (wrapper)
+  (let* ((tg (find-package "TRIVIAL-GARBAGE"))
+         (cancel (when tg (find-symbol "CANCEL-FINALIZATION" tg))))
+    (if (and tg cancel)
+        (once-only (wrapper)
+          `(progn
+             (,cancel ,wrapper)
+             ,wrapper))
+        (error "Trying to use CANCEL-FINALIZATION without TRIVIAL-GARBAGE"))))
+
+(defmacro with-autocollect-cancel ((wrapper &key (invalidate-p t)) &body body)
+  "Run `BODY`, and (by default, with `:invalidate-p` as `T`)
+invalidate `WRAPPER`.  This is protected; a non-local exit from `BODY`
+will still invalidate `WRAPPER`."
+  (once-only (wrapper)
+    `(unwind-protect
+          (progn ,@body)
+       (autocollect-cancel ,wrapper)
+       ,(when invalidate-p
+          `(invalidate ,wrapper)))))
+
 (defun make-wrapper-instance (type-name &rest args)
   (let ((fun (gethash type-name *wrapper-constructors*)))
-    (apply fun args)))
+    (if fun
+        (apply fun args)
+        (error "Type ~S is not a wrapped type" type-name))))
