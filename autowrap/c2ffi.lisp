@@ -10,17 +10,20 @@
 
 (defun local-cpu ()
   #+x86-64 "x86_64"
-  #+(and (not x86-64) x86) "i686")
+  #+(and (not x86-64 freebsd) x86) "i686"
+  #+(and (not x86-64) x86 freebsd) "i386")
 
 (defun local-vendor ()
   #+(or linux windows) "-pc"
-  #+darwin "-apple")
+  #+darwin "-apple"
+  #+(not linux windows darwin) "-unknown")
 
 (defun local-os ()
   #+linux "-linux"
   #+(and x86-64 windows) "-win64"
   #+(and x86 (not x86-64) windows) "-win32"
-  #+darwin "-darwin9")
+  #+darwin "-darwin9"
+  #+freebsd "-freebsd")
 
 (defun local-environment ()
   #+linux "-gnu"
@@ -35,7 +38,9 @@
     "i686-pc-win32"
     "x86_64-pc-win64"
     "i686-apple-darwin9"
-    "x86_64-apple-darwin9"))
+    "x86_64-apple-darwin9"
+    "i386-unknown-freebsd"
+    "x86_64-unknown-freebsd"))
 
  ;; c2ffi
 
