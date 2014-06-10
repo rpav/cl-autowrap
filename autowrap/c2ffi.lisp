@@ -10,13 +10,13 @@
 
 (defun local-cpu ()
   #+x86-64 "x86_64"
-  #+(and (not x86-64 freebsd) x86) "i686"
+  #+(and (not (or x86-64 freebsd)) x86) "i686"
   #+(and (not x86-64) x86 freebsd) "i386")
 
 (defun local-vendor ()
   #+(or linux windows) "-pc"
   #+darwin "-apple"
-  #+(not linux windows darwin) "-unknown")
+  #+(not (or linux windows darwin)) "-unknown")
 
 (defun local-os ()
   #+linux "-linux"
