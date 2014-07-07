@@ -11,7 +11,8 @@
 (defun local-cpu ()
   #+x86-64 "x86_64"
   #+(and (not (or x86-64 freebsd)) x86) "i686"
-  #+(and (not x86-64) x86 freebsd) "i386")
+  #+(and (not x86-64) x86 freebsd) "i386"
+  #+arm "arm")
 
 (defun local-vendor ()
   #+(or linux windows) "-pc"
