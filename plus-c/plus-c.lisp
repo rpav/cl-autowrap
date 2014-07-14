@@ -182,6 +182,15 @@
       `(cffi-sys:%mem-set ,*final-value-set* ,current-ref ,(foreign-type type))
       `(cffi-sys:%mem-ref ,current-ref ,(foreign-type type))))
 
+(defmethod build-ref ((ref null) (type foreign-string) current-ref rest)
+  (if *final-value-set*
+      (call-next-method)
+      `(if autowrap::*inhibit-string-conversion*
+           (values "" ,current-ref)
+           (values
+            (cffi:foreign-string-to-lisp ,current-ref)
+            ,current-ref))))
+
  ;; c-let
 
 (defun make-bindings (free-default bindings rest)
