@@ -42,6 +42,10 @@
           (nstring-upcase string)
           (nstring-upcase (nsubstitute #\- #\_ string))))))
 
+(defun foreign-symbol-exception-p (string)
+  (and *foreign-symbol-exceptions*
+       (nth-value 1 (gethash string *foreign-symbol-exceptions*))))
+
 (defun default-foreign-type-symbol (string type package)
   (let ((string (or (and *foreign-symbol-exceptions*
                          (gethash string *foreign-symbol-exceptions*))
@@ -253,8 +257,10 @@ Return the appropriate CFFI name."))
           as name = (foreign-type-symbol (aval :name field)
                                          :cenumfield *package*)
           as string = (symbol-name name)
-          as truncated = (substr* string prefix-end
-                                  (- (length string) suffix-start))
+          as truncated = (if (foreign-symbol-exception-p (aval :name field))
+                             string
+                             (substr* string prefix-end
+                                      (- (length string) suffix-start)))
           collect (cons (intern truncated
                                 (symbol-package name))
                         (aval :value field)))))
