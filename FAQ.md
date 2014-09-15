@@ -41,6 +41,38 @@ directly, if nothing else:
 (Why?  Unfortunately, this is not a standard symbol exported from
 `COMMON-LISP`, like `*`.)
 
+## It won't find *&lt;foo.h&gt;* / a bunch of definitions are excluded!
+
+When c2ffi runs, it makes a basic guess as to where headers live,
+since there is no API for this.  This means that some system headers,
+usually internal to GCC or glibc or similar, may not be found.
+
+Specify paths to these with `:sysinclude ("/path/...")` to
+`c-include`:
+
+```lisp
+(c-include "..."
+   :sysincludes ("/usr/lib/gcc/x86_64-pc-linux-gnu/4.8.2//include")
+   ...)
+```
+
+If you need to quickly test, rather than deleting `.spec` files and
+reevaluating the `c-include`, simply run c2ffi yourself with the
+appropriate `-i` options:
+
+```console
+$ c2ffi -i /usr/local/include/... -i /usr/lib/gcc/... myinput.h
+...
+```
+
+(If you wrap glib-based things in particular, it can require quite a
+list of these.)
+
+Similarly, complaints about "N definitions excluded" are caused by
+prior types not being understood.  Either they were not included,
+because a header could not be found, or you excluded them with one of
+the `:exclude` options.
+
 ## So I have a bitmask...
 
 If you're looking to define a bitmask, see "...bitmasks?" below.  If
@@ -84,6 +116,19 @@ only flags that match *exactly*:
                         (mask 'sdl-init-flags :everything))
 ;; => (:TIMER :AUDIO :VIDEO :JOYSTICK :HAPTIC :GAMECONTROLLER)
 ```
+
+## There are reports about definitions excluded, and my users think it's a bug
+
+Once you get done wrapping things and you're sure it works, the
+messages about definitions excluded etc may cause your users to
+panic.  For this, there is the `:release` option:
+
+```lisp
+(c-include "..."
+   :release t)
+```
+
+Messages will not be output in this case.
 
 ## Can this handle...
 
