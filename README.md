@@ -1,7 +1,7 @@
 # Issues?
 
 If you have issues, do not hesitate to [file an
-issue](https://github.com/rpav/cl-autowrap/issues)!  **See [the
+issue](https://github.com/rpav/cl-autowrap/issues/new)!  **See [the
 FAQ](https://github.com/rpav/cl-autowrap/blob/master/FAQ.md)
 for some quick tips.**
 
