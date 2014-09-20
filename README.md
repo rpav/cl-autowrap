@@ -1,6 +1,11 @@
-# cl-autowrap
+# Issues?
 
-**Now with [cl-plus-c](https://github.com/rpav/cl-autowrap/blob/master/cl-plus-c.md)!**
+If you have issues, do not hesitate to [file an
+issue](https://github.com/rpav/cl-autowrap/issues/new)!  **See [the
+FAQ](https://github.com/rpav/cl-autowrap/blob/master/FAQ.md)
+for some quick tips.**
+
+# cl-autowrap
 
 This is a new [c2ffi](https://github.com/rpav/c2ffi)-based wrapper
 generator for Common Lisp with a focus, performance, convenience, and
@@ -62,7 +67,8 @@ the function names for disambiguation, this doesn't alter the reader):
 ```
 
 Alternatively, there is now `cl-plus-c`, which can optionally be
-loaded for a different access mechanism:
+loaded for a different access mechanism and **much quicker compile
+times**:
 
 ```lisp
 (asdf:load-system :cl-plus-c)
