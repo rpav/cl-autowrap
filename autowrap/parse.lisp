@@ -86,8 +86,10 @@
          (setf tag :enum)
          (setf symbol-type :cenum))
         (t (error "Unknown tag for MAKE-RECORD-REF: ~S" tag)))
-      `((,tag (,(if (> id 0) nil (foreign-type-symbol name symbol-type *package*))
-               ,@(when (> id 0)
+      `((,tag (,(if (and (string= name "") (> id 0))
+                    nil
+                    (foreign-type-symbol name symbol-type *package*))
+               ,@(when (and (string= name "") (> id 0))
                    `(:id ,id))))))))
 
 (defun record-form-p (form)
