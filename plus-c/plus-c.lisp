@@ -88,7 +88,7 @@
                      `(cffi-sys:%mem-ref ,current-ref :pointer) rest)
           (if *final-value-set*
               `(cffi-sys:%mem-set ,*final-value-set* ,current-ref :pointer)
-              current-ref))))
+              `(cffi-sys:%mem-ref ,current-ref :pointer)))))
 
 (defmethod build-ref ((ref symbol) (type foreign-record) current-ref rest)
   (if (keywordp ref)
