@@ -139,13 +139,13 @@
   (foreign-enum-values (foreign-type object)))
 
 (defun enum-value (foreign-enum key)
-  (let ((enum (if (symbolp foreign-enum)
+  (let ((enum (if (listp foreign-enum)
                   (require-type foreign-enum "map key ~S of enum ~S to value" key foreign-enum)
                   foreign-enum)))
     (aval key (foreign-enum-values enum))))
 
 (defun enum-key (foreign-enum val)
-  (let ((enum (if (symbolp foreign-enum)
+  (let ((enum (if (listp foreign-enum)
                   (require-type foreign-enum "map value ~S of enum ~S to value" val foreign-enum)
                   foreign-enum)))
     (akey val (foreign-enum-values enum))))
