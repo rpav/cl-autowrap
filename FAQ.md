@@ -73,6 +73,16 @@ prior types not being understood.  Either they were not included,
 because a header could not be found, or you excluded them with one of
 the `:exclude` options.
 
+## I tried to find *type* and it doesn't exist, what gives?
+
+Types are called as follows for disambiguation:
+
+* Basic types: `:char`, `:int`, `:long`, etc., and `:pointer`
+* Structs: `struct NAME { ... };` &rarr; `(:struct (NAME))`
+* Unions: `union NAME { ... };` &rarr; `(:union (NAME))`
+* Enums: `enum NAME { ... };` &rarr; `(:enum (NAME))`
+* Aliases, i.e. typedefs: `typedef ANYTHING TYPE-NAME` &rarr; `TYPE-NAME`
+
 ## So I have a bitmask...
 
 If you're looking to define a bitmask, see "...bitmasks?" below.  If
@@ -200,7 +210,7 @@ void foo(int x);  /* See enum X */
 In this case, you can look up the values yourself:
 
 ```lisp
-(foo (autowrap:enum-value 'x :a))
+(foo (autowrap:enum-value '(:enum (x)) :a))
 ```
 
 Sometimes C authors don't even bother to make enums, which is pretty
