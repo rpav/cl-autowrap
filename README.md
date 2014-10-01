@@ -110,7 +110,7 @@ distribute the `.spec` files appropriate to their architecture.
 `cl-autowrap` should generate everything for you, though.
 
 If you decide not to install `c2ffi`, you can specify its path
-directly by setting `autowrap:*c2ffi-program`, e.g.:
+directly by setting `autowrap:*c2ffi-program*`, e.g.:
 
 ```lisp
 (setf autowrap:*c2ffi-program* "/path/to/my/c2ffi")
