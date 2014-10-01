@@ -109,6 +109,16 @@ Again, note that **your users do not need this**, assuming you
 distribute the `.spec` files appropriate to their architecture.
 `cl-autowrap` should generate everything for you, though.
 
+If you decide not to install `c2ffi`, you can specify its path
+directly by setting `autowrap:*c2ffi-program`, e.g.:
+
+```lisp
+(setf autowrap:*c2ffi-program* "/path/to/my/c2ffi")
+```
+
+This should be part of *your local configuration*; do not set this in
+code you distribute.  This includes `LET` forms around `C-INCLUDE`.
+
 ### Loading Libraries
 
 This should be done normally with CFFI.  Either the high-level

@@ -86,7 +86,7 @@
    #:define-bitmask-from-constants #:define-bitmask-from-enum
 
    ;; Parsing and input
-   #:c-include
+   #:c-include #:*c2ffi-program*
 
    ;; Debug
    #:*trace-c2ffi*
