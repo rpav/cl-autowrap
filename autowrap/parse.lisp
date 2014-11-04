@@ -254,7 +254,9 @@ Return the appropriate CFFI name."))
                 fields))
          (prefix-end (find-prefix type-symbol-fields))
          ;; Notably, this is actually the start _from the end_
-         (suffix-start (find-prefix (map 'vector #'reverse type-symbol-fields))))
+         (suffix-start (find-prefix
+                        (map 'vector (lambda (x) (substr* (reverse x) (1+ prefix-end)))
+                             type-symbol-fields))))
     (loop for field in fields
           as name = (foreign-type-symbol (aval :name field)
                                          :cenumfield *package*)

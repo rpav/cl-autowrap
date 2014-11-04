@@ -20,7 +20,14 @@
          (first (elt sorted-fields 0))
          (last (when (> (length sorted-fields) 1)
                  (elt sorted-fields (1- (length sorted-fields))))))
-    (if (and first last) (or (mismatch first last) 0) 0)))
+    (if (and first last)
+        (let ((n (mismatch first last)))
+          (cond
+            ;; Never allow blanks
+            ((and n (> n 0) (= n (length first))) (1- n))
+            (n n)
+            (t 0)))
+        0)))
 
 (defun prefix-trim (list &key (pred 'string) regex)
   (if regex
