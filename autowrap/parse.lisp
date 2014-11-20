@@ -272,7 +272,9 @@ Return the appropriate CFFI name."))
 (defun parse-enum-to-const (fields)
   (loop for field in fields
         as name = (aval :name field)
-        collect (maybe-add-constant name (aval :value field))))
+        collect (maybe-add-constant name (aval :value field))
+          into constants
+        finally (return (remove-if #'null constants))))
 
 (defmethod parse-form (form (tag (eql 'struct)) &key &allow-other-keys)
   (alist-bind (name fields) form
@@ -349,7 +351,8 @@ Return the appropriate CFFI name."))
                  (included-p location exclude-sources))
              (not (or (included-p name include-definitions)
                       (included-p location include-sources))))
-        collect (parse-form form (aval :tag form))))
+        collect (parse-form form (aval :tag form)) into forms
+        finally (return (remove-if #'null forms))))
 
 (defun make-define-list (def-symbol list package)
  (loop for x in (reverse list)
