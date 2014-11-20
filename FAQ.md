@@ -52,7 +52,7 @@ Specify paths to these with `:sysinclude ("/path/...")` to
 
 ```lisp
 (c-include "..."
-   :sysincludes ("/usr/lib/gcc/x86_64-pc-linux-gnu/4.8.2//include")
+   :sysincludes ("/usr/lib/gcc/x86_64-pc-linux-gnu/4.8.2/include")
    ...)
 ```
 
@@ -232,7 +232,7 @@ If you need to, you can make one yourself:
   +C+
   (:d 9999))
 
-(autowrap:enum-value :b) ;; => 2
+(autowrap:enum-value '(:enum (x)) :b) ;; => 2
 ```
 
 If you need a *bitmask*, though, see below.
