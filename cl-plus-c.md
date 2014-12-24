@@ -111,23 +111,19 @@ will let you define, set, and access values somewhat like C:
 You may specify one or more bindings, which are in the following form:
 
 ```lisp
-(NAME C-TYPE &key (alloc 1) free ptr from)
+(NAME C-TYPE &key (count 1) free ptr from)
 ```
 
-* `alloc` will allocate 1 by default, you may make an array by
+* `count`: By default, 1 item is allocated; you may make an array by
   specifying more
-* `free` will *not* free the memory by default; if you specify `t`, it
-  will behave like `autowrap:with-alloc` and free the object at the
-  end of the block
+* `free`: `C-LET` will *not* free the memory by default, `C-WITH`
+  will.  Specifying `free` to be explicit (e.g., per-item).
 * `ptr` is mutually exclusive with `alloc` and `free`.  Nothing will
   be allocated or freed; instead, the pointer specified will be used.
   This is useful when pointers from foreign code are acquired.
 * `from` is similar to `ptr` (and should not be used with `ptr`),
   except it takes an existing *wrapper* object and provides bindings
   as above.
-
-`c-with` is essentially the same as `c-let`, but with the `free`
-argument defaulting to T.
 
 Inside the block:
 
