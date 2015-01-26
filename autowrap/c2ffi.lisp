@@ -21,8 +21,7 @@
 
 (defun local-os ()
   #+linux "-linux"
-  #+(and x86-64 windows) "-win64"
-  #+(and x86 (not x86-64) windows) "-win32"
+  #+windows "-windows-msvc"
   #+darwin "-darwin9"
   #+freebsd "-freebsd")
 
@@ -36,8 +35,8 @@
 (defparameter *known-arches*
   '("i686-pc-linux-gnu"
     "x86_64-pc-linux-gnu"
-    "i686-pc-win32"
-    "x86_64-pc-win64"
+    "i686-pc-windows-msvc"
+    "x86_64-pc-windows-msvc"
     "i686-apple-darwin9"
     "x86_64-apple-darwin9"
     "i386-unknown-freebsd"
