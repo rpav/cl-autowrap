@@ -85,13 +85,6 @@
              (cdr rest))
       (call-next-method)))
 
-(defmethod build-ref ((ref symbol) (type foreign-alias) current-ref rest)
-  (if (typep (foreign-type type) 'foreign-pointer)
-      (build-ref (car rest) (foreign-type type)
-                 (autowrap::make-array-ref :pointer current-ref ref)
-                 (cdr rest))
-      (call-next-method)))
-
 (defmethod build-ref (ref (type foreign-pointer) current-ref rest)
   (if rest
       (build-ref (car rest) type current-ref (cdr rest))
