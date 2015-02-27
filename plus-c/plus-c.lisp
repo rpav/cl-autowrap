@@ -67,6 +67,11 @@
 
 (defgeneric build-ref (ref type current-ref rest))
 
+#+(or)
+(defmethod build-ref :before (ref type current-ref rest)
+  (:say ref type
+        :br "   " current-ref))
+
 (defmethod build-ref (ref type current-ref rest)
   (error "Error parsing ref: ~S on type ~S" ref type))
 
@@ -78,6 +83,13 @@
       (build-ref (car rest) (foreign-type type)
              (autowrap::make-array-ref type current-ref ref)
              (cdr rest))
+      (call-next-method)))
+
+(defmethod build-ref ((ref symbol) (type foreign-alias) current-ref rest)
+  (if (typep (foreign-type type) 'foreign-pointer)
+      (build-ref (car rest) (foreign-type type)
+                 (autowrap::make-array-ref :pointer current-ref ref)
+                 (cdr rest))
       (call-next-method)))
 
 (defmethod build-ref (ref (type foreign-pointer) current-ref rest)
@@ -128,6 +140,11 @@
 (defmethod build-ref ((ref integer) (type foreign-pointer) current-ref rest)
   (build-ref (car rest) (foreign-type type)
              (autowrap::make-array-ref type current-ref ref)
+             (cdr rest)))
+
+(defmethod build-ref ((ref symbol) (type foreign-pointer) current-ref rest)
+  (build-ref (car rest) type
+             (autowrap::make-array-ref :pointer current-ref ref)
              (cdr rest)))
 
 (defmethod build-ref ((ref integer) (type symbol) current-ref rest)
@@ -181,6 +198,9 @@
   (if *final-value-set*
       `(cffi-sys:%mem-set ,*final-value-set* ,current-ref ,(foreign-type type))
       `(cffi-sys:%mem-ref ,current-ref ,(foreign-type type))))
+
+(defmethod build-ref ((ref null) (type foreign-pointer) current-ref rest)
+  (build-ref nil :pointer current-ref rest))
 
 (defmethod build-ref ((ref null) (type foreign-string) current-ref rest)
   (if *final-value-set*
