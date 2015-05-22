@@ -619,7 +619,8 @@ types."
                                                               collect (foreign-type-name f))
                                                       ,@vargs
                                                       ,(basic-foreign-type
-                                                        (foreign-type fun))))))))
+                                                        (foreign-type fun)))
+                                                     :convention :cdecl)))))
 
 (defmacro define-cfun (name-or-function &optional (package *package*))
   (when-let ((fun (find-function name-or-function)))
