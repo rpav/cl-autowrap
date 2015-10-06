@@ -211,7 +211,7 @@
              (with-gensyms (r)
                `((macrolet ((,v (&rest ,r)
                               `(c-ref ,',tmp ,',c-type ,@,r)))
-                   (symbol-macrolet ((,v ,(if (keywordp (basic-foreign-type c-type))
+                   (symbol-macrolet ((,v ,(if (keywordp (basic-foreign-type (find-type c-type)))
                                               `(mem-ref ,tmp ,(basic-foreign-type c-type))
                                               tmp)))
                      ,@(rec (cdr bindings) rest))))))
