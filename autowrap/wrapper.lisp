@@ -9,10 +9,12 @@
 
 (declaim (inline make-wrapper wrapper-ptr))
 (defstruct wrapper
-  #+(or cmucl ecl sbcl clisp)
+  #+(or cmucl ecl sbcl clisp lispworks)
   (ptr (cffi:null-pointer) :type cffi:foreign-pointer)
   #+(or ccl allegro)
   (ptr #.(cffi:null-pointer) :type cffi:foreign-pointer)
+  #-(or cmucl ecl sbcl clisp ccl allegro lispworks)
+  #(error "Unknown Lisp. Fix approprate condition.")
   (validity t))
 
 (defstruct (anonymous-type (:include wrapper)))
