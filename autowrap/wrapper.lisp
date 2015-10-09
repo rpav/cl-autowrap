@@ -14,7 +14,7 @@
   #+(or ccl allegro)
   (ptr #.(cffi:null-pointer) :type cffi:foreign-pointer)
   #-(or cmucl ecl sbcl clisp ccl allegro lispworks)
-  #(error "Unknown Lisp. Fix approprate condition.")
+  (error "Unknown Lisp. Fix appropriate condition.")
   (validity t))
 
 (defstruct (anonymous-type (:include wrapper)))
