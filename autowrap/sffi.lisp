@@ -1070,5 +1070,5 @@ aliases to be specified."
   #+darwin
   (__error))
 
-(defun errno ()
-  (cffi-sys:%mem-ref (get-errno) :int))
+(define-symbol-macro errno
+    (cffi-sys:%mem-ref (get-errno) :int))
