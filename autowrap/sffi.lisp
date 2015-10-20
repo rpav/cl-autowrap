@@ -1060,7 +1060,7 @@ aliases to be specified."
   (define-foreign-function '(__error "__error") :pointer nil)
   (define-cfun __error))
 
-(defun get-errno ()
+(defun get-errno-pointer ()
   #+(or linux freebsd)
   (__errno_location)
 

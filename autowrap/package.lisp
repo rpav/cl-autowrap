@@ -80,7 +80,7 @@
 
    #:defcallback #:callback
 
-   #:get-errno #:errno
+   #:get-errno-pointer #:errno
 
    ;; Bitmasks
    #:define-bitmask #:find-bitmask #:remove-bitmask #:mask-symbol-value
