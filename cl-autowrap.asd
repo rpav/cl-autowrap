@@ -21,5 +21,6 @@
    (:file "c2ffi")
    (:file "wrapper")
    (:file "sffi")
+   (:file "errno")
    (:file "parse")
    (:file "bitmask")))
