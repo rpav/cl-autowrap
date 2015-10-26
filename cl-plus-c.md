@@ -111,7 +111,7 @@ will let you define, set, and access values somewhat like C:
 You may specify one or more bindings, which are in the following form:
 
 ```lisp
-(NAME C-TYPE &key (count 1) free ptr from)
+(NAME C-TYPE &key (count 1) free ptr from value)
 ```
 
 * `count`: By default, 1 item is allocated; you may make an array by
@@ -124,6 +124,8 @@ You may specify one or more bindings, which are in the following form:
 * `from` is similar to `ptr` (and should not be used with `ptr`),
   except it takes an existing *wrapper* object and provides bindings
   as above.
+* `value` sets the initial value.  This may not be used with `:from`
+  or `:ptr`.
 
 Inside the block:
 
