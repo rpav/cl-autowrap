@@ -48,45 +48,45 @@
 
 (defvar *trace-c2ffi* nil)
 
-(defun run-check (program args &key output ignore-error-status)
+(defun run-check (program args &key output)
   (when *trace-c2ffi*
-    (format *debug-io* "~&; Invoking: ~A~{ ~A~}~%" program args))
-  (zerop (nth-value 2 (uiop:run-program (list* program args) :output output :ignore-error-status ignore-error-status))))
+    (format *debug-io* "; ~A~{ ~A~}~%" program args))
+  (= 0 (nth-value 1 (external-program:run program args :output output))))
 
 (defun c2ffi-p ()
   "This is a hack to determine if c2ffi exists; it assumes if it
 doesn't exist, we will get a return code other than 0."
-  (zerop (nth-value 2 (uiop:run-program `(,*c2ffi-program* "-h") :ignore-error-status t))))
+  (= 0 (nth-value 1 (external-program:run *c2ffi-program* '("-h")))))
 
-(defun run-c2ffi (input-file output-basename &key arch sysincludes ignore-error-status)
+(defun write-c2ffi-tempfile (input-file macro-file)
+  "Write a header including the given input-file and the macro-file
+c2ffi will output.  Return the filename."
+  (with-open-file (stream macro-file :direction :output :if-exists :supersede))
+  (namestring
+   (fad:with-output-to-temporary-file (stream)
+     (format stream "#include \"~A\"~%" input-file)
+     (format stream "#include \"~A\"~%" macro-file))))
+
+(defun run-c2ffi (input-file output-basename &key arch sysincludes)
   "Run c2ffi on `INPUT-FILE`, outputting to `OUTPUT-FILE` and
 `MACRO-OUTPUT-FILE`, optionally specifying a target triple `ARCH`."
-  (uiop:with-temporary-file (:pathname tmp-macro-file
-                             :keep *trace-c2ffi*)
-    :close-stream
-    (let* ((output-spec (string+ output-basename ".spec"))
-           (arch (when arch (list "-A" arch)))
-           (sysincludes (loop for dir in sysincludes
-                              append (list "-i" dir))))
-      ;; Invoke c2ffi to emit macros into TMP-MACRO-FILE
-      (when (run-check *c2ffi-program* (list* (namestring input-file)
-                                              "-D" "null"
-                                              "-M" (namestring tmp-macro-file)
-                                              (append arch sysincludes))
-                       :output *standard-output*
-                       :ignore-error-status ignore-error-status)
-        ;; Write a tmp header file that #include's the input file and the macros file.
-        (uiop:with-temporary-file (:stream tmp-include-file-stream
-                                           :pathname tmp-include-file
-                                           :keep *trace-c2ffi*)
-          (format tmp-include-file-stream "#include \"~A\"~%" input-file)
-          (format tmp-include-file-stream "#include \"~A\"~%" tmp-macro-file)
-          :close-stream
-          ;; Invoke c2ffi again to generate the final output.
-          (run-check *c2ffi-program* (list* (namestring tmp-include-file) "-o" output-spec
-                                            (append arch sysincludes))
-                     :output *standard-output*
-                     :ignore-error-status ignore-error-status))))))
+  (let* ((output-h (string+ output-basename ".h"))
+         (output-spec (string+ output-basename ".spec"))
+         (include-file (write-c2ffi-tempfile input-file output-h))
+         (arch (when arch (list "-A" arch)))
+         (sysincludes (loop for dir in sysincludes
+                            append (list "-i" dir))))
+    (when (run-check *c2ffi-program* (list* include-file
+                                    "-D" "null"
+                                    "-M" output-h
+                                    (append arch sysincludes))
+                     :output *standard-output*)
+      (prog1
+          (run-check *c2ffi-program* (list* include-file "-o" output-spec
+                                    (append arch sysincludes))
+                     :output *standard-output*)
+        (delete-file output-h)
+        (delete-file include-file)))))
 
  ;; Specs and Loading
 
@@ -119,18 +119,19 @@ if the file does not exist."
               (error "No spec for ~S on arch '~A' and c2ffi not found"
                      name (local-arch)))
             (let ((arch (local-arch)))
-              (run-c2ffi name (spec-path arch)
-                         :arch arch
-                         :sysincludes sysincludes))
+              (unless (run-c2ffi name (spec-path arch)
+                                 :arch arch
+                                 :sysincludes sysincludes)
+                (error "Error running c2ffi on ~S" name)))
             (loop with local-arch = (local-arch)
                   for arch in *known-arches* do
                     (unless (or (string= local-arch arch)
                                 (member arch arch-excludes :test #'string=))
                       (unless (run-c2ffi name (spec-path arch)
                                          :arch arch
-                                         :sysincludes sysincludes
-                                         :ignore-error-status t)
+                                         :sysincludes sysincludes)
                         (warn "Error generating spec for other arch: ~S" arch))))
             (if-let (h-name (find-local-spec name spec-path))
               h-name
               (error "Error finding spec for ~S after running c2ffi" name)))))))
+
