@@ -396,7 +396,7 @@ Return the appropriate CFFI name."))
                      (constant-package definition-package)
                      (extern-package accessor-package)
                      constant-accessor exclude-constants
-                     trace-c2ffi no-accessors no-functions
+                     (trace-c2ffi *trace-c2ffi*) no-accessors no-functions
                      release-p version
                      type-symbol-function c-to-lisp-function)
   (let ((*foreign-symbol-exceptions* (alist-hash-table symbol-exceptions :test 'equal))
