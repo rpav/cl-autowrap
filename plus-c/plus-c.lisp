@@ -103,7 +103,7 @@
             (if *final-value-set*
                 (once-only (current-ref)
                   `(cffi-sys:%mem-set ,(autowrap::make-bitfield-merge field current-ref *final-value-set*)
-                                      ,current-ref ,(basic-foreign-type (foreign-type field))))
+                                      ,current-ref ,(basic-foreign-type field)))
                 (autowrap::make-bitfield-deref field current-ref))
             (build-ref (car rest) (foreign-type field)
                        (autowrap::make-field-ref field current-ref) (cdr rest)))
@@ -167,8 +167,8 @@
 (defmethod build-ref ((ref null) (type symbol) current-ref rest)
   (if (keywordp type)
       (if *final-value-set*
-          `(cffi-sys:%mem-set ,*final-value-set* ,current-ref ,type)
-          `(cffi-sys:%mem-ref ,current-ref ,type))
+          `(cffi-sys:%mem-set ,*final-value-set* ,current-ref ,(basic-foreign-type type))
+          `(cffi-sys:%mem-ref ,current-ref ,(basic-foreign-type type)))
       (error "Not a basic type: ~S" type)))
 
 (defmethod build-ref ((ref null) (type foreign-record) current-ref rest)
@@ -185,13 +185,13 @@
 
 (defmethod build-ref ((ref null) (type foreign-enum) current-ref rest)
   (if *final-value-set*
-      `(cffi-sys:%mem-set ,*final-value-set* ,current-ref ,(foreign-type type))
-      `(cffi-sys:%mem-ref ,current-ref ,(foreign-type type))))
+      `(cffi-sys:%mem-set ,*final-value-set* ,current-ref ,(basic-foreign-type type))
+      `(cffi-sys:%mem-ref ,current-ref ,(basic-foreign-type type))))
 
 (defmethod build-ref ((ref null) (type foreign-array) current-ref rest)
   (if *final-value-set*
-      `(cffi-sys:%mem-set ,*final-value-set* ,current-ref ,(foreign-type type))
-      `(cffi-sys:%mem-ref ,current-ref ,(foreign-type type))))
+      `(cffi-sys:%mem-set ,*final-value-set* ,current-ref ,(basic-foreign-type type))
+      `(cffi-sys:%mem-ref ,current-ref ,(basic-foreign-type type))))
 
 (defmethod build-ref ((ref null) (type foreign-pointer) current-ref rest)
   (build-ref nil :pointer current-ref rest))

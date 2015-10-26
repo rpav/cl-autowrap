@@ -771,7 +771,7 @@ types."
   (push `(defun (setf ,accessor) (,(intern "V") ,@(accessor-params))
            ,*accessor-declare*
            (cffi-sys:%mem-set ,(make-bitfield-merge field ref (intern "V")) ,ref
-                              ,(basic-foreign-type (foreign-type field))))
+                              ,(basic-foreign-type field)))
         *accessor-forms*)
   (push `(export ',accessor ,*package*) *accessor-forms*))
 
