@@ -46,8 +46,9 @@
 ;;;
 ;;; & (the symbol, &) - as FINAL-FIELD only, returns the address of
 ;;; the last field
-(defmacro c-ref (wrapper type &rest fields)
-  (if-let (type (find-type type))
+(defmacro c-ref (&whole whole-form wrapper type &rest fields)
+  (let ((type (or (find-type type)
+                  (error "Cannot find FFI type ~S in form ~S" type whole-form))))
     (once-only (wrapper)
       (let ((*topmost-parent* wrapper))
         (build-ref (car fields) type `(autowrap:ptr ,wrapper) (cdr fields))))))
