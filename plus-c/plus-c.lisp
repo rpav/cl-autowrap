@@ -58,13 +58,14 @@
 (define-setf-expander c-ref (wrapper type &rest fields)
   (when-let (type (find-type type))
     (with-gensyms (v)
-      (let ((*final-value-set* v))
-        (values
-         nil nil
-         `(,v)
+      (values
+       nil nil
+       `(,v)
+       (let ((*final-value-set* v))
          (build-ref (car fields) type `(autowrap:ptr ,wrapper)
-                    (cdr fields))
-         wrapper)))))
+                    (cdr fields)))
+       (build-ref (car fields) type `(autowrap:ptr ,wrapper)
+                  (cdr fields))))))
 
 (defgeneric build-ref (ref type current-ref rest))
 
