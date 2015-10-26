@@ -63,6 +63,7 @@ doesn't exist, we will get a return code other than 0."
 `MACRO-OUTPUT-FILE`, optionally specifying a target triple `ARCH`."
   (uiop:with-temporary-file (:pathname tmp-macro-file
                              :keep *trace-c2ffi*)
+    nil
     :close-stream
     (let* ((output-spec (string+ output-basename ".spec"))
            (arch (when arch (list "-A" arch)))
