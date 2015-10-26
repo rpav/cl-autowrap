@@ -10,7 +10,7 @@
   :version "1.0"
 
   :depends-on (:alexandria :cffi :cl-json :cl-ppcre
-               :external-program :cl-fad :trivial-features)
+               :uiop :trivial-features)
   :pathname "autowrap"
   :serial t
 
