@@ -72,7 +72,7 @@
 #+(or)
 (defmethod build-ref :before (ref type current-ref rest)
   (:say ref type
-        :br "   " current-ref))
+        :br "   " current-ref rest))
 
 (defmethod build-ref (ref type current-ref rest)
   (error "Error parsing ref: ~S on type ~S" ref type))
@@ -138,9 +138,11 @@
              (cdr rest)))
 
 (defmethod build-ref ((ref symbol) (type foreign-pointer) current-ref rest)
-  (build-ref (car rest) type
-             (autowrap::make-array-ref :pointer current-ref ref)
-             (cdr rest)))
+  (if (keywordp ref)
+      (call-next-method)
+      (build-ref (car rest) type
+                 (autowrap::make-array-ref :pointer current-ref ref)
+                 (cdr rest))))
 
 (defmethod build-ref ((ref integer) (type symbol) current-ref rest)
   (if (keywordp type)
