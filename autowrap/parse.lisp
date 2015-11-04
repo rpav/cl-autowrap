@@ -38,7 +38,7 @@
 (defun default-c-to-lisp (string)
   (let ((string (ppcre:regex-replace-all "([A-Z]+)([A-Z][a-z])" string "\\1_\\2")))
     (let ((string (ppcre:regex-replace-all "([a-z]+)([A-Z])" string "\\1_\\2")))
-      (if (eq #\_ (aref string 0))
+      (if (ppcre:all-matches "^(:_|_)" string)
           (nstring-upcase string)
           (nstring-upcase (nsubstitute #\- #\_ string))))))
 
@@ -165,6 +165,11 @@ Return the appropriate CFFI name."))
 
 (defmethod parse-type (form (tag (eql :signed-char)))
   '(:char))
+
+(defmethod parse-type (form (tag (eql :_bool)))
+  (case (aval :bit-size form)
+    ((8 nil) '(:unsigned-char))
+    (32 '(:unsigned-int))))
 
 (defmethod parse-type (form (tag (eql :array)))
   (alist-bind (type size) form
