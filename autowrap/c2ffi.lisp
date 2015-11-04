@@ -58,13 +58,20 @@
 doesn't exist, we will get a return code other than 0."
   (zerop (nth-value 2 (uiop:run-program `(,*c2ffi-program* "-h") :ignore-error-status t))))
 
+;;; UIOP:WITH-TEMPORARY-FILE does not seem to compile below as of asdf
+;;; 3.1.5, and that's what SBCL is distributed with, so.
+(defmacro with-temporary-file ((&key pathname keep (stream (gensym "STREAM") streamp)) &body body)
+  `(uiop:call-with-temporary-file
+    (lambda (,stream ,pathname)
+      (unless ,streamp (close ,stream))
+      ,@body)
+    :keep ,keep))
+
 (defun run-c2ffi (input-file output-basename &key arch sysincludes ignore-error-status)
   "Run c2ffi on `INPUT-FILE`, outputting to `OUTPUT-FILE` and
 `MACRO-OUTPUT-FILE`, optionally specifying a target triple `ARCH`."
-  (uiop:with-temporary-file (:pathname tmp-macro-file
-                             :keep *trace-c2ffi*)
-    nil
-    :close-stream
+  (with-temporary-file (:pathname tmp-macro-file
+                        :keep *trace-c2ffi*)
     (let* ((output-spec (string+ output-basename ".spec"))
            (arch (when arch (list "-A" arch)))
            (sysincludes (loop for dir in sysincludes
@@ -77,12 +84,12 @@ doesn't exist, we will get a return code other than 0."
                        :output *standard-output*
                        :ignore-error-status ignore-error-status)
         ;; Write a tmp header file that #include's the input file and the macros file.
-        (uiop:with-temporary-file (:stream tmp-include-file-stream
-                                           :pathname tmp-include-file
-                                           :keep *trace-c2ffi*)
+        (with-temporary-file (:stream tmp-include-file-stream
+                              :pathname tmp-include-file
+                              :keep *trace-c2ffi*)
           (format tmp-include-file-stream "#include \"~A\"~%" input-file)
           (format tmp-include-file-stream "#include \"~A\"~%" tmp-macro-file)
-          :close-stream
+          (close tmp-include-file-stream)
           ;; Invoke c2ffi again to generate the final output.
           (run-check *c2ffi-program* (list* (namestring tmp-include-file) "-o" output-spec
                                             (append arch sysincludes))
