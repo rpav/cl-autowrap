@@ -225,6 +225,8 @@
                  (with-gensyms (tmp)
                    (destructuring-bind (v c-type &key (count 1) (free free-default) ptr from value)
                        (car bindings)
+                     (unless (find-type c-type)
+                       (error 'autowrap:undefined-foreign-type :typespec c-type))
                      (if (or ptr from)
                          (if (keywordp c-type)
                              `((let ((,tmp ,ptr))
