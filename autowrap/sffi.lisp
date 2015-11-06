@@ -550,7 +550,8 @@ Create a type from `TYPESPEC` and return the `TYPE` structure representing it."
             (constant-string-p
               (and (constantp (car params))
                    (stringp (car params)))))
-        `(let ((,name ,(car params))
+        `(let ((,name (or ,(car params)
+                          (cffi-sys:null-pointer)))
                (,own-p))
            (unwind-protect
                 (progn
