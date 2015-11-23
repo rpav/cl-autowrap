@@ -428,7 +428,7 @@ Create a type from `TYPESPEC` and return the `TYPE` structure representing it."
     (ecase type
       (enum
        (let ((name (parse-record-name (cadr typespec))))
-         (define-foreign-enum name nil (cddr typespec))))
+         (define-foreign-enum name 0 (cddr typespec))))
       ((struct union)
        (let ((name (parse-record-name (cadr typespec))))
          (destructuring-bind (_ &key bit-size bit-alignment &allow-other-keys)
