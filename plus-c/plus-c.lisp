@@ -183,10 +183,11 @@
   (if *final-value-set*
       (error "You may not set the value of a record (~S)" type)
       (with-gensyms (v)
-        `(let ((,v (make-instance ',(let ((name (foreign-type-name type)))
-                                      (if (symbol-package name)
-                                          name
-                                          'autowrap:anonymous-type)))))
+        `(let ((,v ,(let ((name (foreign-type-name type)))
+                      (if (symbol-package name)
+                          `(,(intern (string+ "MAKE-" name)
+                                     (symbol-package name)))
+                          '(autowrap:make-anonymous-type)))))
            (setf (autowrap::wrapper-ptr ,v) ,current-ref)
            (setf (autowrap::wrapper-validity ,v) ,*topmost-parent*)
            ,v))))
@@ -239,7 +240,8 @@
                              `((let ((,tmp
                                        ,(if from
                                             from
-                                            `(let ((,tmp (make-instance ',c-type)))
+                                            `(let ((,tmp (,(intern (string+ "MAKE-" c-type)
+                                                                   (symbol-package c-type)))))
                                                (setf (autowrap::wrapper-ptr ,tmp) ,ptr)
                                                ,tmp))))
                                  ,@(maybe-make-macro bindings rest tmp v c-type nil))))

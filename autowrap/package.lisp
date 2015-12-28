@@ -16,7 +16,7 @@
    #:invalid-wrapper
 
    ;; Wrapper
-   #:wrapper #:anonymous-type
+   #:wrapper #:anonymous-type #:make-anonymous-type
 
    #:make-wrapper #:wrapped-ptr #:wrapper-valid-p
    #:ptr #:valid-p #:invalidate
@@ -94,7 +94,8 @@
    #:*trace-c2ffi*
 
    ;; Utility
-   #:asdf-path))
+   #:asdf-path
+   #:string+))
 
 (defpackage :autowrap.minimal
   (:documentation "A minimal set of useful symbols for doing common things with autowrap.")
