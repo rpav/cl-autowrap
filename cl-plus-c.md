@@ -95,6 +95,66 @@ referencing objects out-of-bounds, setting invalid pointers, etc.
 This is not considerably different than `cl-autowrap` accessors, or
 simply referencing things in C.  Be careful!
 
+## Pointers and Values
+
+One big goal for `cl-plus-c` is for pointers-vs-values to be clear:
+how to get each, and when you need each.  This is actually implemented
+so that each are *more* consistent than C, but it's been pointed out
+this isn't necessarily intuitive from the above.
+
+The main question is "how do I get different things in `cl-plus-c`,
+and when do I use `&`?".  The answer is that you *always* get the
+*value* by default; if you want the *address* of the value, you use
+`&`.
+
+Imagine the following:
+
+```c
+struct a {
+    char c0;
+    char c1;
+};
+
+struct b {
+    int x;
+    int y;
+};
+
+struct c {
+    int i;
+    char c[5];
+
+    struct a *s;
+    struct b t;
+} c;
+```
+
+The basic cases:
+
+* If you want the *value* of `c.i`, then you use `(c i)`.  If you want
+  the *address* `&(c.i)`, then you use `(c i &)`.
+* If you want the *value* of `c.s->c0`, then you use `(c s c0)`.  If
+  you want the *address* `&(c.s->c0)`, you use `(c s c0 &)`.  This
+  consists of some pointer math and dereferences along the way, but it
+  still gives you the *address* of the last-named field, much like C.
+* If you want the *value* of `c.s`, this *value* is a *pointer*.  You
+  say `c.s` in C, and you get a pointer; likewise you say `(c s)` and
+  you get a pointer (or a wrapper, in this case).
+
+Now for some "odd" cases:
+
+* Note that in `struct c`, the `char c[5]` field is *not* a pointer; 5
+  chars are *inside* the struct.  But, if you say `c.c` in C, this
+  gives you a pointer!  In `cl-plus-c`, saying `(c c)` gives you the
+  *value*, the equivalent of `c.c[0]`.  If you want the location of
+  the struct field, you say `(c c &)`, just like *every other* case.
+* You cannot take the value of a record.  Thus, unlike saying `(c s)`,
+  which results in a pointer (wrapper), saying `(c t)` is an error.
+  But if you want the location, you *still* say `(c t &)`.
+* There is no ambiguity between `.` and `->`, and whether the field is
+  a pointer or value; thus dereferencing a field uses identical syntax.
+
+
 ## Allocation
 
 For ultimate convenience, `cl-plus-c` defines `c-let`/`c-with`, which
