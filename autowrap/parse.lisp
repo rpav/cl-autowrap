@@ -315,14 +315,15 @@ Return the appropriate CFFI name."))
          (define-foreign-enum ',sym ,id ',(parse-enum-fields fields))))))
 
 (defmethod parse-form (form (tag (eql 'function)) &key &allow-other-keys)
-  (alist-bind (name parameters return-type variadic) form
-    (let ((sym (foreign-type-symbol name :cfun *package*)))
-      (let ((cfun-fields (parse-fields parameters :cparam)))
-        (push sym *foreign-function-list*)
-        `(define-foreign-function '(,sym ,name
-                                    ,@(when variadic '(:variadic-p t)))
-             ',@(parse-type return-type (aval :tag return-type))
-           ',cfun-fields)))))
+  (alist-bind (name inline parameters return-type variadic) form
+    (unless inline
+      (let ((sym (foreign-type-symbol name :cfun *package*)))
+        (let ((cfun-fields (parse-fields parameters :cparam)))
+          (push sym *foreign-function-list*)
+          `(define-foreign-function '(,sym ,name
+                                      ,@(when variadic '(:variadic-p t)))
+               ',@(parse-type return-type (aval :tag return-type))
+             ',cfun-fields))))))
 
 (defmethod parse-form (form (tag (eql 'const)) &key &allow-other-keys)
   (alist-bind (name value) form
