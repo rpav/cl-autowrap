@@ -257,19 +257,14 @@ Return the appropriate CFFI name."))
                                         :cenumfield
                                         *package*)))
                 fields))
-         (prefix-end (find-prefix type-symbol-fields))
-         ;; Notably, this is actually the start _from the end_
-         (suffix-start (find-prefix
-                        (map 'vector (lambda (x) (substr* (reverse x) (1+ prefix-end)))
-                             type-symbol-fields))))
+         (prefix-end (find-prefix type-symbol-fields)))
     (loop for field in fields
           as name = (foreign-type-symbol (aval :name field)
                                          :cenumfield *package*)
           as string = (symbol-name name)
           as truncated = (if (foreign-symbol-exception-p (aval :name field))
                              string
-                             (substr* string prefix-end
-                                      (- (length string) suffix-start)))
+                             (substr* string prefix-end))
           collect (cons (intern truncated
                                 (symbol-package name))
                         (aval :value field)))))
