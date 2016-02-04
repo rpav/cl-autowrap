@@ -121,9 +121,7 @@ of pointer-to-record"
   (unless (included-p name *foreign-constant-excludes*)
     (let ((sym (foreign-type-symbol name :cconst *package*)))
       (pushnew sym *foreign-constant-list*)
-      (if (stringp value)
-          `(defvar ,sym ,value)
-          `(defconstant ,sym ,value)))))
+      `(defparameter ,sym ,value))))
 
  ;; Parsing
 
