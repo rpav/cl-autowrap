@@ -40,7 +40,8 @@
     "i686-apple-darwin9"
     "x86_64-apple-darwin9"
     "i386-unknown-freebsd"
-    "x86_64-unknown-freebsd"))
+    "x86_64-unknown-freebsd"
+    "arm-pc-linux-gnu"))
 
  ;; c2ffi
 
