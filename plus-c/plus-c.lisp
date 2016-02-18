@@ -11,7 +11,7 @@
                  (c-symbol autowrap::c-symbol)
                  (fields autowrap::fields)) fun
       (let ((names (mapcar (lambda (x)
-                             (gensym (symbol-name x)))
+                             (gensym (symbol-name (slot-value x 'autowrap::name))))
                            fields)))
        (autowrap::foreign-to-ffi
         (and (car fields) (foreign-type (car fields)))
