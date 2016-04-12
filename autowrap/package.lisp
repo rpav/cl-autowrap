@@ -108,7 +108,7 @@
    #:inhibit-string-conversion #:autocollect #:wrapper-null-p #:sizeof
    #:autocollect-cancel #:with-autocollect-cancel #:making-autocollect-instance)
   (:export #:ptr #:invalidate #:enum-value #:enum-key #:mask #:mask-apply #:mask-keywords
-           #:alloc-ptr #:alloc #:with-alloc #:with-many-alloc #:defcallback #:callback
+           #:alloc-ptr #:alloc #:with-alloc #:with-many-alloc #:free #:defcallback #:callback
            #:inhibit-string-conversion #:autocollect #:wrapper-null-p #:sizeof
            #:autocollect-cancel #:with-autocollect-cancel
            #:making-autocollect-instance))
