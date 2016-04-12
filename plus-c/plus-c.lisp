@@ -74,7 +74,7 @@
 
 (defgeneric build-ref (ref type current-ref rest))
 
-#+(or)
+#++
 (defmethod build-ref :before (ref type current-ref rest)
   (:say ref type
         :br "   " current-ref rest))
@@ -194,7 +194,7 @@
 
 (defmethod build-ref ((ref null) (type foreign-enum) current-ref rest)
   (if *final-value-set*
-      `(cffi-sys:%mem-set ,*final-value-set* ,current-ref ,(basic-foreign-type type))
+      `(cffi-sys:%mem-set (enum-value ',(foreign-type-name type) ,*final-value-set*) ,current-ref ,(basic-foreign-type type))
       `(cffi-sys:%mem-ref ,current-ref ,(basic-foreign-type type))))
 
 (defmethod build-ref ((ref null) (type foreign-array) current-ref rest)
