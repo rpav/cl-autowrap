@@ -82,6 +82,9 @@
 
    #:get-errno-pointer #:errno
 
+   #:int8 #:uint8 #:int16 #:uint16 #:int32 #:uint32
+   #:int64 #:uint64 #:size-t
+
    ;; Bitmasks
    #:define-bitmask #:find-bitmask #:remove-bitmask #:mask-symbol-value
    #:mask #:mask-apply #:mask-keywords
