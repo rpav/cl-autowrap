@@ -28,17 +28,28 @@
   (define-foreign-function '(c-malloc "malloc") :pointer
     '((size size-t)))
 
+  (define-foreign-function '(c-calloc "calloc") :pointer
+    '((nmemb size-t)
+      (size size-t)))
+
   (define-foreign-function '(c-free "free") :void
     '((ptr :pointer)))
 
   (define-foreign-function '(c-realloc "realloc") :pointer
     '((ptr :pointer)
-      (size size-t))))
+      (size size-t)))
+
+  (define-foreign-function '(c-memset "memset") :pointer
+    '((s :pointer)
+      (c :int)
+      (n size-t))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (define-cfun c-malloc)
+  (define-cfun c-calloc)
   (define-cfun c-free)
-  (define-cfun c-realloc))
+  (define-cfun c-realloc)
+  (define-cfun c-memset))
 
  ;; Allocating things
 
@@ -48,6 +59,13 @@
    (* count (foreign-type-size
              (require-type type "allocate an instance of foreign type ~S" type)))))
 
+(defun calloc-ptr (type &optional (count 1))
+  "Return a pointer allocated to the size of `TYPE`, initialized to zero"
+  (c-calloc
+   count
+   (foreign-type-size
+    (require-type type "allocate an instance of foreign type ~S" type))))
+
 (defun alloc (type &optional (count 1))
   "Return a foreign wrapper for `TYPE` with its pointer allocated.
 Freeing is up to you!"
@@ -56,6 +74,16 @@ Freeing is up to you!"
       (let ((wrapper (make-wrapper-instance (foreign-type-name (require-type type "allocate a wrapper for an instance of foreign type ~S" type)))))
         (setf (wrapper-ptr wrapper)
               (alloc-ptr type count))
+        wrapper)))
+
+(defun calloc (type &optional (count 1))
+  "Return a foreign wrapper for `TYPE` with its pointer allocated, and
+its contents initialized to zero.  Freeing is up to you!"
+  (if (foreign-scalar-p type)
+      (calloc-ptr type count)
+      (let ((wrapper (make-wrapper-instance (foreign-type-name (require-type type "allocate a wrapper for an instance of foreign type ~S" type)))))
+        (setf (wrapper-ptr wrapper)
+              (calloc-ptr type count))
         wrapper)))
 
 (defun realloc (ptr type count)

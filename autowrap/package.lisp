@@ -75,7 +75,7 @@
 
    #:inhibit-string-conversion
 
-   #:alloc-ptr #:alloc #:realloc #:free #:with-alloc #:with-many-alloc
+   #:alloc-ptr #:alloc #:calloc-ptr #:calloc #:realloc #:free #:with-alloc #:with-many-alloc
    #:c-aptr #:c-aref #:sizeof
 
    #:defcallback #:callback
@@ -107,11 +107,13 @@
    :autowrap
 
    #:ptr #:invalidate #:enum-value #:enum-key #:mask #:mask-apply #:mask-keywords
-   #:alloc-ptr #:alloc #:free #:with-alloc #:with-many-alloc #:defcallback #:callback
+   #:alloc-ptr #:alloc #:calloc-ptr #:calloc #:free #:with-alloc #:with-many-alloc
+   #:defcallback #:callback
    #:inhibit-string-conversion #:autocollect #:wrapper-null-p #:sizeof
    #:autocollect-cancel #:with-autocollect-cancel #:making-autocollect-instance)
   (:export #:ptr #:invalidate #:enum-value #:enum-key #:mask #:mask-apply #:mask-keywords
-           #:alloc-ptr #:alloc #:realloc #:with-alloc #:with-many-alloc #:free #:defcallback #:callback
+           #:alloc-ptr #:alloc #:calloc-ptr #:calloc #:realloc #:with-alloc #:with-many-alloc #:free
+           #:defcallback #:callback
            #:inhibit-string-conversion #:autocollect #:wrapper-null-p #:sizeof
            #:autocollect-cancel #:with-autocollect-cancel
            #:making-autocollect-instance))
