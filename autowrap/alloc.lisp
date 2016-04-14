@@ -125,18 +125,18 @@ its contents initialized to zero.  Freeing is up to you!"
   (let ((size (foreign-type-size (require-type type "index into array of elements of type ~S" type))))
     (cffi-sys:inc-pointer (ptr wrapper) (* index size))))
 
-(defun c-aref (wrapper index &optional (type (foreign-type-name wrapper)))
-  (etypecase type
-    (keyword
-     (cffi-sys:%mem-ref (c-aptr wrapper index type) type))
-    (t (wrap-pointer (c-aptr wrapper index type) type wrapper))))
-
 (define-compiler-macro c-aptr (&whole whole wrapper index
                                       &optional type)
   (if (constantp type)
       (let ((size (foreign-type-size (require-type (eval type) "index into array of elements of type ~S" type))))
         `(cffi-sys:inc-pointer (ptr ,wrapper) (* ,index ,size)))
       whole))
+
+(defun c-aref (wrapper index &optional (type (foreign-type-name wrapper)))
+  (etypecase type
+    (keyword
+     (cffi-sys:%mem-ref (c-aptr wrapper index type) type))
+    (t (wrap-pointer (c-aptr wrapper index type) type wrapper))))
 
 (define-compiler-macro c-aref (&whole whole wrapper index
                                       &optional type)
