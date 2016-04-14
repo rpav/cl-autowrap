@@ -122,7 +122,8 @@
 (defmethod build-ref ((ref (eql '*)) (type foreign-pointer)
                       current-ref rest)
   (let ((child-type (foreign-type type)))
-    (build-ref nil child-type current-ref rest)))
+    (build-ref (car rest) child-type
+               `(cffi-sys:%mem-ref ,current-ref :pointer) (cdr rest))))
 
 (defmethod build-ref ((ref (eql '&)) type current-ref rest)
   (when rest
@@ -199,8 +200,8 @@
 
 (defmethod build-ref ((ref null) (type foreign-array) current-ref rest)
   (if *final-value-set*
-      `(cffi-sys:%mem-set ,*final-value-set* ,current-ref ,(basic-foreign-type type))
-      `(cffi-sys:%mem-ref ,current-ref ,(basic-foreign-type type))))
+      `(cffi-sys:%mem-set ,*final-value-set* ,current-ref ,(foreign-type type))
+      `(cffi-sys:%mem-ref ,current-ref ,(foreign-type type))))
 
 (defmethod build-ref ((ref null) (type foreign-pointer) current-ref rest)
   (build-ref nil :pointer current-ref rest))
