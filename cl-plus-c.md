@@ -171,7 +171,7 @@ will let you define, set, and access values somewhat like C:
 You may specify one or more bindings, which are in the following form:
 
 ```lisp
-(NAME C-TYPE &key (count 1) free ptr from value)
+(NAME C-TYPE &key (count 1) free ptr from value calloc)
 ```
 
 * `count`: By default, 1 item is allocated; you may make an array by
@@ -186,6 +186,8 @@ You may specify one or more bindings, which are in the following form:
   as above.
 * `value` sets the initial value.  This may not be used with `:from`
   or `:ptr`.
+* `calloc`: if `T`, uses `CALLOC` to allocate, zeroing the memory
+  allocated.  `NIL` by default.
 
 Inside the block:
 

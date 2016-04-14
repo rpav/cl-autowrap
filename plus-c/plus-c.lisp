@@ -230,7 +230,7 @@
            (rec (bindings rest)
              (if bindings
                  (with-gensyms (tmp)
-                   (destructuring-bind (v c-type &key (count 1) (free free-default) ptr from value)
+                   (destructuring-bind (v c-type &key (count 1) (free free-default) ptr from value calloc)
                        (car bindings)
                      (unless (find-type c-type)
                        (error 'autowrap:undefined-foreign-type :typespec c-type))
@@ -247,9 +247,9 @@
                                                ,tmp))))
                                  ,@(maybe-make-macro bindings rest tmp v c-type nil))))
                          (if free
-                             `((with-alloc (,tmp ',c-type ,count)
-                                 ,@(maybe-make-macro bindings rest tmp v c-type value)))
-                             `((let ((,tmp (autowrap:alloc ',c-type ,count)))
+                             `((,(if calloc 'with-calloc 'with-alloc) (,tmp ',c-type ,count)
+                                ,@(maybe-make-macro bindings rest tmp v c-type value)))
+                             `((let ((,tmp (,(if calloc 'calloc 'alloc) ',c-type ,count)))
                                  ,@(maybe-make-macro bindings rest tmp v c-type value)))))))
                  rest)))
     (first (rec bindings rest))))
