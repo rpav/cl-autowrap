@@ -208,7 +208,10 @@
 
 (defmethod build-ref ((ref null) (type foreign-string) current-ref rest)
   (if *final-value-set*
-      (call-next-method)
+      `(if (stringp ,*final-value-set*)
+           (cffi-sys:%mem-set (alloc-string ,*final-value-set*)
+                              ,current-ref :pointer)
+           ,(call-next-method))
       `(if autowrap::*inhibit-string-conversion*
            (values "" ,current-ref)
            (values

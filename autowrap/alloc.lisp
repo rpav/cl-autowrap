@@ -174,3 +174,8 @@ its contents initialized to zero.  Freeing is up to you!"
                        (sizeof type)
                        (sizeof src)))))
     (c-memcpy (ptr dest) (ptr src) size)))
+
+(defun alloc-string (string)
+  (let ((ptr (calloc :char (1+ (length string)))))
+    (cffi:lisp-string-to-foreign string ptr (1+ (length string)))
+    ptr))

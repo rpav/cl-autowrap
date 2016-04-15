@@ -79,6 +79,7 @@
    #:with-alloc #:with-many-alloc #:with-calloc
    #:c-aptr #:c-aref #:sizeof
    #:memcpy
+   #:alloc-string
 
    #:defcallback #:callback
 
