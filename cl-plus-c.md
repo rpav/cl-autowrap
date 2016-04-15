@@ -198,3 +198,8 @@ Inside the block:
   the variable, much like C
 * `(NAME ...)` is equivalent to `(c-ref NAME C-TYPE ...)`, so you do
   not have to manually specify this every time
+* `(setf (ref :string-field) "STRING")` will allocate, copy, and
+  assign a string pointer to the field.  This must be freed manually.
+  Due to the semantics of plus-c, the easiest way to do this is `(free
+  (ref :string-field * &))`, which implicitly avoids conversion back
+  to a lisp string, and returns the pointer directly.
