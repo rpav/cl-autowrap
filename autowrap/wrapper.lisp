@@ -99,3 +99,4 @@ will still invalidate `WRAPPER`."
     (if fun
         (apply fun args)
         (error "Type ~S is not a wrapped type" type-name))))
+

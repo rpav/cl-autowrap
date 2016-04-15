@@ -78,6 +78,7 @@
    #:alloc-ptr #:alloc #:calloc-ptr #:calloc #:realloc #:free
    #:with-alloc #:with-many-alloc #:with-calloc
    #:c-aptr #:c-aref #:sizeof
+   #:memcpy
 
    #:defcallback #:callback
 
@@ -113,7 +114,7 @@
    #:inhibit-string-conversion #:autocollect #:wrapper-null-p #:sizeof
    #:autocollect-cancel #:with-autocollect-cancel #:making-autocollect-instance)
   (:export #:ptr #:invalidate #:enum-value #:enum-key #:mask #:mask-apply #:mask-keywords
-           #:alloc-ptr #:alloc #:calloc-ptr #:calloc #:realloc #:with-alloc #:with-many-alloc #:free
+           #:alloc-ptr #:alloc #:calloc-ptr #:calloc #:realloc #:with-alloc #:with-many-alloc #:free #:memcpy
            #:defcallback #:callback
            #:inhibit-string-conversion #:autocollect #:wrapper-null-p #:sizeof
            #:autocollect-cancel #:with-autocollect-cancel

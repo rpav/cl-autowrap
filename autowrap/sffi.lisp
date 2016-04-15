@@ -95,16 +95,19 @@
                :initform nil :accessor foreign-function-variadic-p)))
 
 (defun find-type (typespec)
-  (if (or (keywordp typespec)
-          (typep typespec 'foreign-type))
-      typespec
-      (let ((type (gethash typespec *foreign-types*)))
-        (if (and (not type)
-                 (listp typespec)
-                 (eq :pointer (car typespec)))
-            (when-let (child-type (find-type (cadr typespec)))
-              (create-type-from-complex-typespec typespec ":pointer alias for ~S" typespec))
-            type))))
+  (etypecase typespec
+    ((or keyword foreign-type) typespec)
+    (wrapper (find-type (type-of typespec)))
+    (t (if (or (keywordp typespec)
+               (typep typespec 'foreign-type))
+           typespec
+           (let ((type (gethash typespec *foreign-types*)))
+             (if (and (not type)
+                      (listp typespec)
+                      (eq :pointer (car typespec)))
+                 (when-let (child-type (find-type (cadr typespec)))
+                   (create-type-from-complex-typespec typespec ":pointer alias for ~S" typespec))
+                 type))))))
 
 (defun undefined-enum-value (value)
   (push `(:enum ,value) *wrap-failers*)

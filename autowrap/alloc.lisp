@@ -42,6 +42,11 @@
   (define-foreign-function '(c-memset "memset") :pointer
     '((s :pointer)
       (c :int)
+      (n size-t)))
+
+  (define-foreign-function '(c-memcpy "memcpy") :pointer
+    '((dest :pointer)
+      (src :pointer)
       (n size-t))))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -49,7 +54,8 @@
   (define-cfun c-calloc)
   (define-cfun c-free)
   (define-cfun c-realloc)
-  (define-cfun c-memset))
+  (define-cfun c-memset)
+  (define-cfun c-memcpy))
 
  ;; Allocating things
 
@@ -162,3 +168,9 @@ its contents initialized to zero.  Freeing is up to you!"
                       (cffi-sys:%mem-set ,v (c-aptr ,ptr ,index ,type) ,type)
                       ,v))))
       whole))
+
+(defun memcpy (dest src &key (n 1) type)
+  (let ((size (* n (if type
+                       (sizeof type)
+                       (sizeof src)))))
+    (c-memcpy (ptr dest) (ptr src) size)))
