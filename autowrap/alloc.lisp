@@ -97,8 +97,7 @@ its contents initialized to zero.  Freeing is up to you!"
     (if (cffi:pointerp ptr)
         (c-realloc ptr (* count size))
         (setf (wrapper-ptr ptr)
-              (c-realloc (ptr ptr) (* count size))))
-    ptr))
+              (c-realloc (ptr ptr) (* count size))))))
 
 (defun free (object)
   "Free WRAPPER via FOREIGN-FREE and invalidate."
