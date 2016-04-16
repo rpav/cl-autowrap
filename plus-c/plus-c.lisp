@@ -262,3 +262,10 @@
 
 (defmacro c-with (bindings &body body)
   (make-bindings t bindings body))
+
+(defmacro c-val (bindings &body body)
+  `(c-let (,@(loop for b in bindings
+                   collect `(,(first b) ,(second b)
+                             :from (the ,(second b) ,(or (third b)
+                                                         (first b))))))
+     ,@body))

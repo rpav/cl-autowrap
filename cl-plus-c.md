@@ -203,3 +203,31 @@ Inside the block:
   Due to the semantics of plus-c, the easiest way to do this is `(free
   (ref :string-field * &))`, which implicitly avoids conversion back
   to a lisp string, and returns the pointer directly.
+
+## c-val
+
+The `c-val` macro is a convenience feature for "rebinding" an existing
+wrapper.  You could write the following:
+
+```lisp
+(defun some-fun (val)
+  (c-let ((val val-type :from val))
+    ...))
+```
+
+But with `c-val` you can simply write the following:
+
+```lisp
+(defun some-fun (val)
+  (c-val ((val val-type))
+    ...))
+
+;;; Or:
+
+(defun some-fun (...)
+  (c-val ((val val-type (get-a-val-form ...)))
+    ...))
+```
+
+As an added feature, either form uses `(the (or null TYPE) FORM)` to
+declare the value of `FORM`.
