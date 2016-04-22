@@ -176,7 +176,10 @@
 (defmethod build-ref ((ref null) (type symbol) current-ref rest)
   (if (keywordp type)
       (if *final-value-set*
-          `(cffi-sys:%mem-set ,*final-value-set* ,current-ref ,(basic-foreign-type type))
+          `(cffi-sys:%mem-set ,(if (eql :pointer type)
+                                   `(ptr ,*final-value-set*)
+                                   *final-value-set*)
+                              ,current-ref ,(basic-foreign-type type))
           `(cffi-sys:%mem-ref ,current-ref ,(basic-foreign-type type)))
       (error "Not a basic type: ~S" type)))
 
