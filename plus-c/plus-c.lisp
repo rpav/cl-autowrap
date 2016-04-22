@@ -266,6 +266,5 @@
 (defmacro c-val (bindings &body body)
   `(c-let (,@(loop for b in bindings
                    collect `(,(first b) ,(second b)
-                             :from (the ,(second b) ,(or (third b)
-                                                         (first b))))))
+                             :from ,(or (third b) (first b)))))
      ,@body))

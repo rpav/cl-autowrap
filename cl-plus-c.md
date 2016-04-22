@@ -229,5 +229,6 @@ But with `c-val` you can simply write the following:
     ...))
 ```
 
-As an added feature, either form uses `(the (or null TYPE) FORM)` to
-declare the value of `FORM`.
+**Note:** Types are no longer declared with `THE`, it was causing more
+problems than it was solving, and defeating the point of avoiding
+consing by wrapper reuse.
