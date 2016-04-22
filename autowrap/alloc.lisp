@@ -5,11 +5,11 @@
     (map nil
          (lambda (x)
            (push (cons (foreign-type-size x) x) unsigned))
-         '(:unsigned-char :unsigned-int :unsigned-long))
+         '(:unsigned-char :unsigned-int :unsigned-long :unsigned-long-long))
     (map nil
          (lambda (x)
            (push (cons (foreign-type-size x) x) signed))
-         '(:char :int :long))
+         '(:char :int :long :long-long))
     (define-foreign-type 'int8 (aval 1 signed))
     (define-foreign-type 'uint8 (aval 1 unsigned))
     (define-foreign-type 'int16 (aval 2 signed))
