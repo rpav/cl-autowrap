@@ -218,7 +218,7 @@
       `(if autowrap::*inhibit-string-conversion*
            (values "" ,current-ref)
            (values
-            (cffi:foreign-string-to-lisp ,current-ref)
+            (cffi:foreign-string-to-lisp (cffi-sys:%mem-ref ,current-ref :pointer))
             ,current-ref))))
 
  ;; c-let
