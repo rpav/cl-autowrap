@@ -380,8 +380,8 @@ call it.  "
                  (progn
                    (push (apply #'parse-one-field record-type record-type-name pre-offset field)
                          record-fields))
-                 (destructuring-bind (anon-record-type anon-params &rest anon-field-list)
-                     field-typespec
+                 (destructuring-bind (anon-record-type &optional anon-params &rest anon-field-list)
+                     (mklist field-typespec) ; ensure it's a list
                    (declare (ignore anon-params))
                    (let* ((anonymous-fields (parse-record-fields anon-record-type nil
                                                                  anon-field-list bit-offset)))

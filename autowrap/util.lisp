@@ -2,6 +2,13 @@
 
  ;; misc
 
+(defun mklist (obj)
+  "if not already a list, mklist will return a
+   new list with its param as element"
+  (if (listp obj)
+      obj
+      (list obj)))
+
 (defun substr* (str start &optional end)
   "Make a shared substring of STR using MAKE-ARRAY :displaced-to"
   (let* ((end (or end (length str)))
