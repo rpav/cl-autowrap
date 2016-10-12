@@ -23,7 +23,8 @@
   #+linux "-linux"
   #+windows "-windows-msvc"
   #+darwin "-darwin9"
-  #+freebsd "-freebsd")
+  #+freebsd "-freebsd"
+  #+openbsd "-openbsd6.0")
 
 (defun local-environment ()
   #+linux "-gnu"
@@ -41,6 +42,8 @@
     "x86_64-apple-darwin9"
     "i386-unknown-freebsd"
     "x86_64-unknown-freebsd"
+    "i386-unknown-openbsd"
+    "x86_64-unknown-openbsd"
     "arm-pc-linux-gnu"))
 
  ;; c2ffi
