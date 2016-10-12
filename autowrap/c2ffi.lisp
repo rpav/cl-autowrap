@@ -24,7 +24,7 @@
   #+windows "-windows-msvc"
   #+darwin "-darwin9"
   #+freebsd "-freebsd"
-  #+openbsd "-openbsd6.0")
+  #+openbsd "-openbsd")
 
 (defun local-environment ()
   #+linux "-gnu"
