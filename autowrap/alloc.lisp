@@ -150,8 +150,8 @@ its contents initialized to zero.  Freeing is up to you!"
       (etypecase (eval type)
         (keyword
          `(cffi-sys:%mem-ref (c-aptr ,wrapper ,index ,type) ,type))
-        (t `(once-only (wrapper index)
-              (wrap-pointer (c-aptr ,wrapper ,index ,type) ,type ,wrapper))))
+        (t (once-only (wrapper)
+             `(wrap-pointer (c-aptr ,wrapper ,index ,type) ,type ,wrapper))))
       whole))
 
 (defun (setf c-aref) (v ptr index type)
