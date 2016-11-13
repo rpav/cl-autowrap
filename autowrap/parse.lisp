@@ -347,9 +347,11 @@ Return the appropriate CFFI name."))
         as location = (aval :location form)
         unless
         (and (or (included-p name exclude-definitions)
-                 (included-p location exclude-sources))
+                 (and (included-p location exclude-sources)
+                      (not (included-p name include-definitions))))
              (not (or (included-p name include-definitions)
-                      (included-p location include-sources))))
+                      (and (included-p location include-sources)
+                           (not (included-p name exclude-definitions))))))
         collect (parse-form form (aval :tag form)) into forms
         finally (return (remove-if #'null forms))))
 
