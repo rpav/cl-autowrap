@@ -618,10 +618,17 @@ types."
     (or (not (foreign-scalar-p (foreign-type fun)))
         (some (lambda (p) (not (foreign-scalar-p (foreign-type p)))) fields))))
 
+(defvar *build-libffi-call*
+  (lambda (fun &rest r)
+    (declare (ignore r))
+    `(error "Call-by-value not implemented without loading cl-autowrap/libffi
+  (trying to call ~S)"
+            ',(foreign-type-name fun))))
+
 (defun make-foreign-funcall (fun param-names vargs)
   (with-slots (c-symbol fields) fun
     (if (foreign-function-cbv-p fun)
-        `(error "Call-by-value not implemented yet for ~S" ',(foreign-type-name fun))
+        (funcall *build-libffi-call* fun param-names vargs)
         (foreign-wrap-up (foreign-type fun) fun
                          `(cffi-sys:%foreign-funcall ,c-symbol
                                                      (,@(loop for f in fields

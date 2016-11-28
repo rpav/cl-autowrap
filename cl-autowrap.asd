@@ -9,7 +9,7 @@
   :license "BSD-2-Clause"
   :version "1.0"
 
-  :depends-on (:alexandria :cffi :cl-json :cl-ppcre
+  :depends-on (:alexandria :cffi :cl-json :cl-ppcre :defpackage-plus
                :uiop :trivial-features)
   :pathname "autowrap"
   :serial t
@@ -25,3 +25,24 @@
    (:file "errno")
    (:file "parse")
    (:file "bitmask")))
+
+(defsystem :cl-autowrap/libffi
+  :description "Optional libffi extension for call-by-value"
+  :author "Ryan Pavlik"
+  :license "BSD-2-Clause"
+  :version "1.0"
+
+  :depends-on (:cl-autowrap :cl-plus-c)
+  :pathname "autowrap-libffi"
+  :serial t
+
+  :components
+  ((:module #:autowrap-spec
+    :pathname "spec"
+    :components
+    ((:static-file "libffi.h")))
+   (:file "autowrap")
+   (:file "library")
+   (:file "package")
+   (:file "types")
+   (:file "libffi")))

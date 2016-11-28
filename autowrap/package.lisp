@@ -1,4 +1,6 @@
-(defpackage :autowrap
+(in-package :defpackage+-user-1)
+
+(defpackage+ :autowrap
   (:use #:cl #:alexandria)
   (:export
    ;; Conditions
@@ -120,3 +122,6 @@
            #:inhibit-string-conversion #:autocollect #:wrapper-null-p #:sizeof
            #:autocollect-cancel #:with-autocollect-cancel
            #:making-autocollect-instance))
+
+(defpackage+ :autowrap.libffi
+  (:use))
