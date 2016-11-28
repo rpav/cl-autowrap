@@ -353,28 +353,41 @@ call it.  "
                                                            name c-symbol (car param) (cadr param)))))
         (setf (gethash name *foreign-functions*) fun)))))
 
-(defun parse-record-fields (record-type record-type-name field-list)
-  (loop for field in field-list
-        collect
-        (destructuring-bind (name type &key bitfield-p bit-size bit-offset
-                             bit-alignment bit-width)
-            field
-          (handler-case
-              (make-instance 'foreign-record-field
-                :name name
-                :type (ensure-type type "record ~(~S~) ~S field ~S of type ~S"
-                                   record-type record-type-name name type)
-                :bitfield-p bitfield-p
-                :bit-size bit-size
-                :bit-offset bit-offset
-                :bit-alignment bit-alignment
-                :bit-width bit-width)
-            (undefined-foreign-type (e)
-              (unless *mute-reporting-p*
-                (format *error-output* "~@<; ~@;~A~:@>~%" e))
-              nil)))
-          into fields
-        finally (return (delete-if #'null fields))))
+(defun parse-one-field (record-type record-type-name pre-offset
+                        name type &key bitfield-p bit-size bit-offset bit-alignment
+                        bit-width)
+  (handler-case
+      (make-instance 'foreign-record-field
+        :name name
+        :type (ensure-type type "record ~(~S~) ~S field ~S of type ~S"
+                           record-type record-type-name name type)
+        :bitfield-p bitfield-p
+        :bit-size bit-size
+        :bit-offset (+ pre-offset bit-offset)
+        :bit-alignment bit-alignment
+        :bit-width bit-width)
+    (undefined-foreign-type (e)
+      (unless *mute-reporting-p*
+        (format *error-output* "~@<; ~@;~A~:@>~%" e))
+      nil)))
+
+(defun parse-record-fields (record-type record-type-name field-list &optional (pre-offset 0))
+  (loop with record-fields
+        for field in field-list
+        do (destructuring-bind (field-name field-typespec &key bit-offset &allow-other-keys)
+               field
+             (if (symbol-package field-name)
+                 (progn
+                   (push (apply #'parse-one-field record-type record-type-name pre-offset field)
+                         record-fields))
+                 (destructuring-bind (anon-record-type &optional anon-params &rest anon-field-list)
+                     (ensure-list field-typespec)
+                   (declare (ignore anon-params))
+                   (let* ((anonymous-fields (parse-record-fields anon-record-type nil
+                                                                 anon-field-list bit-offset)))
+                     (loop for i in anonymous-fields
+                           do (push i record-fields))))))
+        finally (return (delete-if #'null record-fields))))
 
 (defun struct-or-union-p (name)
   (or (find-type `(:struct (,name)))
