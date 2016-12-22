@@ -31,14 +31,16 @@
         `(let ((,cif (gethash ',name *libffi-cif*)))
            (c-with ((,args :pointer :count ,(length param-names) :calloc t)
                     ,@(unless voidp
-                        `((,ret ,(foreign-type-name (foreign-type fun)) :calloc t :free nil)))
+                        `((,ret ,(foreign-type-name (foreign-type fun))
+                                :calloc t
+                                :free ,(foreign-scalar-p (foreign-type fun)))))
                     ,@alloc-params)
              ,@set-params
              (if-let ((,function-pointer (cffi-sys:%foreign-symbol-pointer ,c-symbol :default)))
                (progn
                  (autowrap.libffi:ffi-call ,cif
                                            ,function-pointer
-                                           ,(unless voidp `(print (ptr ,ret)))
+                                           ,(unless voidp `(,ret &))
                                            (,args &))
                  ,(unless voidp ret))
                (error "Calling foreign function via libffi:~%Symbol not loaded: ~S" ,c-symbol))
