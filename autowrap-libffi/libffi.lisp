@@ -31,7 +31,7 @@
         `(let ((,cif (gethash ',name *libffi-cif*)))
            (c-with ((,args :pointer :count ,(length param-names) :calloc t)
                     ,@(unless voidp
-                        `((,ret ,(foreign-type-name (foreign-type fun))
+                        `((,ret ,(foreign-qualified-name (foreign-type fun))
                                 :calloc t
                                 :free ,(foreign-scalar-p (foreign-type fun)))))
                     ,@alloc-params)

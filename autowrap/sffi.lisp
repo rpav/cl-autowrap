@@ -255,7 +255,19 @@
 vs anything else (including enums)."
   (keywordp (unaliased-type type)))
 
- ;; Defining things
+(defgeneric foreign-qualified-name (type)
+  "Return the qualified name (e.g., `(:struct (FOO))` of `TYPE`.")
+
+(defmethod foreign-qualified-name ((type foreign-type))
+  (foreign-type-name type))
+
+(defmethod foreign-qualified-name ((type foreign-record))
+  `(,(foreign-type type) (,(foreign-type-name type))))
+
+(defmethod foreign-qualified-name ((type foreign-enum))
+  `(:enum (,(foreign-type-name type))))
+
+ ;; defining things
 
 (defun define-foreign-type (name type)
   "Trivially define a foreign type given `NAME` and a `foreign-type` object,
