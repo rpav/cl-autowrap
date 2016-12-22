@@ -258,7 +258,7 @@ vs anything else (including enums)."
 (defgeneric foreign-qualified-name (type)
   (:documentation "Return the qualified name (e.g., `(:struct (FOO))` of `TYPE`."))
 
-(defmethod foreign-qualified-name ((type foreign-type))
+(defmethod foreign-qualified-name (type)
   (foreign-type-name type))
 
 (defmethod foreign-qualified-name ((type foreign-record))

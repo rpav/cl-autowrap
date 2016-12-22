@@ -30,9 +30,8 @@
   (:documentation "Find or create a libffi equivalent of `FOREIGN-TYPE`."))
 
 (defmethod ensure-libffi-type :around (ft)
-  (print
-   (or (gethash ft *libffi-type-map*)
-       (call-next-method))))
+  (or (gethash ft *libffi-type-map*)
+      (call-next-method)))
 
 (defmethod ensure-libffi-type ((ft symbol))
   (when (keywordp ft)
