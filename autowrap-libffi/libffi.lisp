@@ -17,9 +17,10 @@
               for i from 0
               as c-name = (gensym)
               as type = (foreign-type field)
+              as type-name = (foreign-qualified-name type)
               as scalarp = (foreign-scalar-p type)
               if scalarp
-              do (push `(,c-name ,type :value ,name) alloc-params)
+              do (push `(,c-name ,type-name :value ,name) alloc-params)
                  (push `(setf ,c-name ,name) set-params)
                  (push `(setf (,args ,i) (,c-name &)) set-params)
               else
