@@ -4,5 +4,7 @@
   :spec-path '(#:cl-autowrap/libffi #:autowrap-spec)
   :sysincludes '("/usr/lib64/libffi-3.2.1/include")
 
+  :symbol-exceptions (("FFI_TYPE" . "ffi-id-type"))
+
   :no-accessors cl:t
   :release-p cl:t)

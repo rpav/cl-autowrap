@@ -528,9 +528,10 @@ Create a type from `TYPESPEC` and return the `TYPE` structure representing it."
   `(let ((,(car names) ,(car params)))
      ,(next-ffi)))
 
-;;; FIXME: implement record by value
+;;; Record by value.. just pass through the pointer
 (defmethod foreign-to-ffi ((type foreign-record) names params fields body)
-  (next-ffi))
+  `(let ((,(car names) ,(car params)))
+     ,(next-ffi)))
 
 (defmethod foreign-to-ffi ((type foreign-enum) names params fields body)
   (let* ((name (car names))

@@ -6,4 +6,4 @@
   (:windows "libffi.dll")
   (t (:default "libffi")))
 
-(cffi:use-foreign-library libffi) 
+(cffi:use-foreign-library libffi)
