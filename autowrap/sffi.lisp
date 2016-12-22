@@ -256,7 +256,7 @@ vs anything else (including enums)."
   (keywordp (unaliased-type type)))
 
 (defgeneric foreign-qualified-name (type)
-  "Return the qualified name (e.g., `(:struct (FOO))` of `TYPE`.")
+  (:documentation "Return the qualified name (e.g., `(:struct (FOO))` of `TYPE`."))
 
 (defmethod foreign-qualified-name ((type foreign-type))
   (foreign-type-name type))
