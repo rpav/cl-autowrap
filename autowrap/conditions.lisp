@@ -55,15 +55,12 @@ suppress them.")
 
 (defun report-wrap-failures (kind stream)
   (unless *mute-reporting-p*
-    (format stream "; Total of ~D ~(~A~) skipped definitions" (length *failed-wraps*) kind)
-    (if *failed-wraps*
-        (format stream ":~%~@<;   ~@;~{~A ~}~:@>~%" (sort (copy-list *failed-wraps*) #'string<))
-        (terpri stream))
-    (let ((unique-failers (delete-duplicates (sort (mapcar #'prin1-to-string *wrap-failers*) #'string<) :test #'string=)))
+    (when *failed-wraps*
+      (format stream "; Total of ~D ~(~A~) skipped definitions" (length *failed-wraps*) kind)
+      (format stream ":~%~@<;   ~@;~{~A ~}~:@>~%" (sort (copy-list *failed-wraps*) #'string<)))
+    (when-let ((unique-failers (delete-duplicates (sort (mapcar #'prin1-to-string *wrap-failers*) #'string<) :test #'string=)))
       (format stream "; Total of ~D ~(~A~) missing entities" (length unique-failers) kind)
-      (if unique-failers
-          (format stream ":~%~@<;   ~@;~{~A ~}~:@>~%" unique-failers)
-          (terpri stream)))))
+      (format stream ":~%~@<;   ~@;~{~A ~}~:@>~%" unique-failers))))
 
 (defun clear-wrap-failures ()
   (setf *failed-wraps* nil)
