@@ -37,6 +37,18 @@
   (when (keywordp ft)
     (gethash ft *libffi-type-map*)))
 
+(defmethod ensure-libffi-type ((ft foreign-pointer))
+  ffi-type-pointer)
+
+(defmethod ensure-libffi-type ((ft foreign-array))
+  ffi-type-pointer)
+
+(defmethod ensure-libffi-type ((ft foreign-enum))
+  (ensure-libffi-type (basic-foreign-type ft)))
+
+(defmethod ensure-libffi-type ((ft foreign-function))
+  ffi-type-pointer)
+
 (defmethod ensure-libffi-type ((ft foreign-alias))
   (ensure-libffi-type (foreign-type ft)))
 
