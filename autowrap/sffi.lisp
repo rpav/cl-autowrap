@@ -267,7 +267,7 @@ vs anything else (including enums)."
   `(:enum (,(foreign-type-name type))))
 
 (defmethod foreign-qualified-name ((type foreign-pointer))
-  `(:pointer ,(foreign-qualified-name (foreign-type type))))
+  `(:pointer (,(foreign-qualified-name (foreign-type type)))))
 
  ;; defining things
 
