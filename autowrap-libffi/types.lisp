@@ -41,7 +41,18 @@
   ffi-type-pointer)
 
 (defmethod ensure-libffi-type ((ft foreign-array))
-  ffi-type-pointer)
+  ;; Note this doesn't get cached.  May need better handling.
+  (let ((size (foreign-array-size ft))
+        (type (ensure-libffi-type (foreign-type ft))))
+    (c-let ((array autowrap.libffi:ffi-type :calloc t)
+            (elements :pointer
+                      :count (1+ size) ;; NULL TERMINATED!
+                      :calloc t))
+      (setf (array :type) autowrap.libffi:+ffi-type-struct+
+            (array :elements) (elements &))
+      (loop for i from 0 below size
+            do (setf (elements i) type))
+      array)))
 
 (defmethod ensure-libffi-type ((ft foreign-enum))
   (ensure-libffi-type (basic-foreign-type ft)))
@@ -61,14 +72,18 @@ libffi only supports foreign struct records"
   (let* ((fields (foreign-record-fields ft))
          (field-count (length fields)))
     (c-let ((type autowrap.libffi:ffi-type :calloc t)
+            ;; FIXME: allocates too many in the case of duplicate fields
             (elements :pointer
                       :count (1+ field-count) ;; NULL TERMINATED!
                       :calloc t))
       (setf (type :type) autowrap.libffi:+ffi-type-struct+)
       (setf (type :elements) (elements &))
-      (loop for i from (1- field-count) downto 0
-            for field in fields
-            do (setf (elements i)
-                     (ensure-libffi-type (foreign-type field))))
+      (loop as offset = -1 then (frf-bit-offset field)
+            for i from 0 below field-count
+            for field in (reverse fields)
+            do (unless (<= (frf-bit-offset field) offset)
+                   (setf (elements i)
+                         (ensure-libffi-type (foreign-type field)))))
       (setf (gethash ft *libffi-type-map*) type)
       type)))
+

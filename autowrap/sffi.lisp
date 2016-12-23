@@ -267,6 +267,9 @@ vs anything else (including enums)."
 (defmethod foreign-qualified-name ((type foreign-enum))
   `(:enum (,(foreign-type-name type))))
 
+(defmethod foreign-qualified-name ((type foreign-pointer))
+  `(:pointer ,(foreign-qualified-name (foreign-type type))))
+
  ;; defining things
 
 (defun define-foreign-type (name type)
