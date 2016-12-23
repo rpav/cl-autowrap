@@ -86,4 +86,3 @@ libffi only supports foreign struct records"
                          (ensure-libffi-type (foreign-type field)))))
       (setf (gethash ft *libffi-type-map*) type)
       type)))
-
