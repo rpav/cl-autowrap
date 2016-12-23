@@ -228,8 +228,8 @@
              (with-gensyms (r)
                `((macrolet ((,v (&rest ,r)
                               `(c-ref ,',tmp ,',c-type ,@,r)))
-                   (symbol-macrolet ((,v ,(if (keywordp (basic-foreign-type (find-type c-type)))
-                                              `(mem-ref ,tmp ,(basic-foreign-type c-type))
+                   (symbol-macrolet ((,v ,(if (foreign-scalar-p (find-type c-type))
+                                              `(mem-ref ,tmp ,(basic-foreign-type (find-type c-type)))
                                               tmp)))
                      ,@(when value `((setf ,v ,value)))
                      ,@(rec (cdr bindings) rest))))))
@@ -238,25 +238,26 @@
                  (with-gensyms (tmp)
                    (destructuring-bind (v c-type &key (count 1) (free free-default) ptr from value calloc)
                        (car bindings)
-                     (unless (find-type c-type)
-                       (error 'autowrap:undefined-foreign-type :typespec c-type))
-                     (if (or ptr from)
-                         (if (keywordp c-type)
-                             `((let ((,tmp ,ptr))
-                                 ,@(maybe-make-macro bindings rest tmp v c-type nil)))
-                             `((let ((,tmp
-                                       ,(if from
-                                            from
-                                            `(let ((,tmp (,(intern (string+ "MAKE-" c-type)
-                                                                   (symbol-package c-type)))))
-                                               (setf (autowrap::wrapper-ptr ,tmp) ,ptr)
-                                               ,tmp))))
-                                 ,@(maybe-make-macro bindings rest tmp v c-type nil))))
-                         (if free
-                             `((,(if calloc 'with-calloc 'with-alloc) (,tmp ',c-type ,count)
-                                ,@(maybe-make-macro bindings rest tmp v c-type value)))
-                             `((let ((,tmp (,(if calloc 'calloc 'alloc) ',c-type ,count)))
-                                 ,@(maybe-make-macro bindings rest tmp v c-type value)))))))
+                     (let ((type (find-type c-type)))
+                       (unless type
+                         (error 'autowrap:undefined-foreign-type :typespec c-type))
+                       (if (or ptr from)
+                           (if (foreign-scalar-p type)
+                               `((let ((,tmp ,ptr))
+                                   ,@(maybe-make-macro bindings rest tmp v c-type nil)))
+                               `((let ((,tmp
+                                         ,(if from
+                                              from
+                                              `(let ((,tmp (,(intern (string+ "MAKE-" c-type)
+                                                                     (symbol-package c-type)))))
+                                                 (setf (autowrap::wrapper-ptr ,tmp) ,ptr)
+                                                 ,tmp))))
+                                   ,@(maybe-make-macro bindings rest tmp v c-type nil))))
+                           (if free
+                               `((,(if calloc 'with-calloc 'with-alloc) (,tmp ',c-type ,count)
+                                  ,@(maybe-make-macro bindings rest tmp v c-type value)))
+                               `((let ((,tmp (,(if calloc 'calloc 'alloc) ',c-type ,count)))
+                                   ,@(maybe-make-macro bindings rest tmp v c-type value))))))))
                  rest)))
     (first (rec bindings rest))))
 

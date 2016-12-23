@@ -204,6 +204,11 @@
 (defmethod foreign-scalar-p ((type foreign-alias))
   (foreign-scalar-p (basic-foreign-type type)))
 
+(defmethod foreign-scalar-p ((type list))
+  (let ((specifier (car type)))
+    (or (eq specifier :pointer)
+        (eq specifier :enum))))
+
 (defgeneric foreign-type-size (type)
   (:documentation "The size for type `TYPE`, in bytes."))
 
