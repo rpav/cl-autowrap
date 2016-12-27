@@ -105,7 +105,8 @@
              (if (and (not type)
                       (listp typespec)
                       (eq :pointer (car typespec)))
-                 :pointer
+                 (when-let (child-type (find-type (cadr typespec)))
+                   (create-type-from-complex-typespec typespec ":pointer alias for ~S" typespec))
                  type))))))
 
 (defun undefined-enum-value (value)
@@ -272,7 +273,7 @@ vs anything else (including enums)."
   `(:enum (,(foreign-type-name type))))
 
 (defmethod foreign-qualified-name ((type foreign-pointer))
-  `(:pointer (,(foreign-qualified-name (foreign-type type)))))
+  `(:pointer ,(foreign-qualified-name (foreign-type type))))
 
  ;; defining things
 
