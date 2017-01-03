@@ -674,6 +674,13 @@ types."
                                                         (foreign-type fun)))
                                                      :convention :cdecl)))))
 
+(defvar *build-libffi-definition*
+  (lambda (fun &rest r)
+    (declare (ignore r))
+    `(error "Call-by-value not implemented without loading cl-autowrap/libffi
+  (trying to call ~S)"
+            ',(foreign-type-name fun))))
+
 (defmacro define-cfun (name-or-function &optional (package *package*))
   (when-let ((fun (find-function name-or-function)))
     (with-wrap-attempt ("function ~S" name-or-function) name-or-function
@@ -682,15 +689,20 @@ types."
                (param-names (mapcar #'foreign-type-name fields))
                (param-syms (mapcar (lambda (x) (gensym (symbol-name x))) param-names)))
           (with-gensyms (!fun !fields rest)
-            `(defmacro ,fun-name (,@param-names ,@(when (foreign-function-variadic-p fun) `(&rest ,rest)))
-               (let ((,!fun (find-function ',name-or-function)))
-                 (with-slots ((,!fields fields)) ,!fun
-                   (foreign-to-ffi
-                    (and (car ,!fields) (foreign-type (car ,!fields)))
-                    ',param-syms
-                    (list ,@param-names)
-                    ,!fields
-                    (make-foreign-funcall ,!fun ',param-syms ,(when (foreign-function-variadic-p fun) rest))))))))))))
+            (let ((macro
+                    `(defmacro ,fun-name (,@param-names ,@(when (foreign-function-variadic-p fun) `(&rest ,rest)))
+                       (let ((,!fun (find-function ',name-or-function)))
+                         (with-slots ((,!fields fields)) ,!fun
+                           (foreign-to-ffi
+                            (and (car ,!fields) (foreign-type (car ,!fields)))
+                            ',param-syms
+                            (list ,@param-names)
+                            ,!fields
+                            (make-foreign-funcall ,!fun ',param-syms ,(when (foreign-function-variadic-p fun) rest))))))))
+              `(progn
+                 ,@(when (foreign-function-cbv-p fun)
+                     (list (funcall *build-libffi-definition* fun)))
+                 ,macro))))))))
 
 (defmacro define-cextern (name &optional (package *package*))
   (with-wrap-attempt ("extern ~S" name) name

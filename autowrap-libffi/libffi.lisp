@@ -1,13 +1,24 @@
 (in-package :autowrap)
 
-(setq *build-libffi-call*
+(setf *build-libffi-definition*
+      (lambda (fun)
+        (build-libffi-definition fun)))
+
+;;; If we do this in BUILD-LIBFFI-CALL, it doesn't happen on fasl
+;;; reload.  Just safer to make all the CIFs and also a precursor to
+;;; managing this for dumps.
+(defun build-libffi-definition (fun)
+  (with-slots (name) fun
+    `(eval-when (:compile-toplevel :load-toplevel :execute)
+       (ensure-cif ',name))))
+
+(setf *build-libffi-call*
       (lambda (fun param-names vargs)
         (build-libffi-call fun param-names vargs)))
 
 (defun build-libffi-call (fun param-names vargs)
   (declare (ignore vargs))
   (with-slots (c-symbol name fields) fun
-    (ensure-cif fun)
     (let (alloc-params
           set-params
           (voidp (eq :void (foreign-type fun))))
@@ -47,25 +58,26 @@
                (error "Calling foreign function via libffi:~%Symbol not loaded: ~S" ,c-symbol))
              ))))))
 
-(defun ensure-cif (fun)
-  (with-slots (name fields (return-type type)) fun
-    (or (gethash name *libffi-cif*)
-        (let* ((sig (ensure-sig fields)))
-          (c-let ((cif autowrap.libffi:ffi-cif :calloc t))
-            (let ((status (autowrap.libffi:ffi-prep-cif cif
-                                                        autowrap.libffi:+ffi-default-abi+
-                                                        (length fields)
-                                                        (ensure-libffi-type return-type)
-                                                        sig)))
-              (if (= status autowrap.libffi:+ffi-ok+)
-                  (progn
-                    (setf (gethash name *libffi-cif*) cif)
-                    cif)
-                  (progn
-                    (free cif)
-                    (error "Error creating CIF for ~S: ~S"
-                           (foreign-type-name fun)
-                           (enum-key 'autowrap.libffi:ffi-status status))))))))))
+(defun ensure-cif (name)
+  (let ((fun (find-function name)))
+    (with-slots (fields (return-type type)) fun
+      (or (gethash name *libffi-cif*)
+          (let* ((sig (ensure-sig fields)))
+            (c-let ((cif autowrap.libffi:ffi-cif :calloc t))
+              (let ((status (autowrap.libffi:ffi-prep-cif cif
+                                                          autowrap.libffi:+ffi-default-abi+
+                                                          (length fields)
+                                                          (ensure-libffi-type return-type)
+                                                          sig)))
+                (if (= status autowrap.libffi:+ffi-ok+)
+                    (progn
+                      (setf (gethash name *libffi-cif*) cif)
+                      cif)
+                    (progn
+                      (free cif)
+                      (error "Error creating CIF for ~S: ~S"
+                             (foreign-type-name fun)
+                             (enum-key 'autowrap.libffi:ffi-status status)))))))))))
 
 (defun ensure-sig (fields)
   (let ((type-names (mapcar (lambda (x)
