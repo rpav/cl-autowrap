@@ -183,7 +183,12 @@
   :pointer)
 
 (defmethod basic-foreign-type ((type foreign-record))
-  type)
+  (if (foreign-scalar-p type)
+      (let ((largest-field (reduce (lambda (x y)
+                                     (if (> (frf-bit-size x) (frf-bit-size y)) x y))
+                                   (foreign-record-fields type))))
+        (basic-foreign-type largest-field))
+      type))
 
 (defmethod basic-foreign-type ((type null)) nil)
 
@@ -204,6 +209,13 @@
 (defmethod foreign-scalar-p ((type (eql ':void))) t)
 (defmethod foreign-scalar-p ((type foreign-alias))
   (foreign-scalar-p (basic-foreign-type type)))
+
+(defmethod foreign-scalar-p ((field foreign-record-field))
+  (foreign-scalar-p (foreign-type field)))
+
+(defmethod foreign-scalar-p ((type foreign-record))
+  (when (eq :union (foreign-type type))
+       (every #'foreign-scalar-p (foreign-record-fields type))))
 
 (defmethod foreign-scalar-p ((type list))
   (let ((specifier (car type)))

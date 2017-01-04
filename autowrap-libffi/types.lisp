@@ -64,11 +64,11 @@
   (ensure-libffi-type (foreign-type ft)))
 
 (defmethod ensure-libffi-type ((ft foreign-record))
-  (unless (eq :struct (foreign-type ft))
-    (error "ENSURE-LIBFFI-TYPE called with ~S (~S)
-libffi only supports foreign struct records"
-           (foreign-type-name ft)
-           (foreign-type ft)))
+  (if (eq :struct (foreign-type ft))
+      (ensure-libffi-struct ft)
+      (ensure-libffi-union ft)))
+
+(defun ensure-libffi-struct (ft)
   (let* ((fields (foreign-record-fields ft))
          (field-count (length fields)))
     (c-let ((type autowrap.libffi:ffi-type :calloc t)
@@ -82,7 +82,21 @@ libffi only supports foreign struct records"
             for i from 0 below field-count
             for field in (reverse fields)
             do (unless (<= (frf-bit-offset field) offset)
-                   (setf (elements i)
-                         (ensure-libffi-type (foreign-type field)))))
+                 (setf (elements i)
+                       (ensure-libffi-type (foreign-type field)))))
       (setf (gethash ft *libffi-type-map*) type)
       type)))
+
+(defun ensure-libffi-union (ft)
+  (unless (every #'foreign-scalar-p (foreign-record-fields ft))
+    (error "Complex union type: ~S" ft))
+  (let ((largest-field (reduce (lambda (x y)
+                                 (if (> (frf-bit-size x) (frf-bit-size y)) x y))
+                               (foreign-record-fields ft))))
+    (c-let ((type autowrap.libffi:ffi-type :calloc t)
+            (elements :pointer :count 1 :calloc t))
+      (setf (type :type) autowrap.libffi:+ffi-type-struct+)
+      (setf (type :elements) (elements &))
+      (setf (elements 0) (ensure-libffi-type (foreign-type largest-field))))))
+
+
