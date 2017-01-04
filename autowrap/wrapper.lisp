@@ -94,9 +94,9 @@ will still invalidate `WRAPPER`."
        ,(when invalidate-p
           `(invalidate ,wrapper)))))
 
-(defun make-wrapper-instance (type-name &rest args)
-  (let ((fun (gethash type-name *wrapper-constructors*)))
+(defun make-wrapper-instance (unqualified-record-name &rest args)
+  (let ((fun (gethash unqualified-record-name *wrapper-constructors*)))
     (if fun
         (apply fun args)
-        (error "Type ~S is not a wrapped type" type-name))))
+        (error "Type ~S is not a wrapped type" unqualified-record-name))))
 

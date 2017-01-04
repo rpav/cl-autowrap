@@ -38,7 +38,8 @@
    #:default-c-to-lisp
 
    ;; SFFI
-   #:foreign-type #:foreign-type-name #:basic-foreign-type
+   #:foreign-type #:foreign-type-name #:foreign-qualified-name
+   #:basic-foreign-type
 
    #:foreign-record #:foreign-record-bit-size #:foreign-record-bit-alignment
    #:foreign-record-fields #:find-record-field

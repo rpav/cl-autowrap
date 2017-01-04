@@ -248,8 +248,8 @@
                                `((let ((,tmp
                                          ,(if from
                                               from
-                                              `(let ((,tmp (,(intern (string+ "MAKE-" c-type)
-                                                                     (symbol-package c-type)))))
+                                              `(let ((,tmp (,(gethash (foreign-type-name type)
+                                                                      autowrap::*wrapper-constructors*))))
                                                  (setf (autowrap::wrapper-ptr ,tmp) ,ptr)
                                                  ,tmp))))
                                    ,@(maybe-make-macro bindings rest tmp v c-type nil))))

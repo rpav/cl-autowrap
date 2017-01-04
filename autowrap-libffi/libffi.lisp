@@ -13,10 +13,10 @@
        (ensure-cif ',name))))
 
 (setf *build-libffi-call*
-      (lambda (fun param-names vargs)
-        (build-libffi-call fun param-names vargs)))
+      (lambda (fun return-value param-names vargs)
+        (build-libffi-call fun return-value param-names vargs)))
 
-(defun build-libffi-call (fun param-names vargs)
+(defun build-libffi-call (fun return-value param-names vargs)
   (declare (ignore vargs))
   (with-slots (c-symbol name fields) fun
     (let (alloc-params
@@ -43,9 +43,11 @@
         `(let ((,cif (gethash ',name *libffi-cif*)))
            (c-with ((,args :pointer :count ,(length param-names) :calloc t)
                     ,@(unless voidp
-                        `((,ret ,(foreign-qualified-name (foreign-type fun))
-                                :calloc t
-                                :free ,(foreign-scalar-p (foreign-type fun)))))
+                        (if (foreign-scalar-p (foreign-type fun))
+                            `((,ret ,(foreign-qualified-name (foreign-type fun))
+                                    :calloc t))
+                            `((,ret ,(foreign-qualified-name (foreign-type fun))
+                                    :ptr (ptr ,return-value)))))
                     ,@alloc-params)
              ,@set-params
              (if-let ((,function-pointer (cffi-sys:%foreign-symbol-pointer ,c-symbol :default)))
@@ -55,8 +57,7 @@
                                            ,(unless voidp `(,ret &))
                                            (,args &))
                  ,(unless voidp ret))
-               (error "Calling foreign function via libffi:~%Symbol not loaded: ~S" ,c-symbol))
-             ))))))
+               (error "Calling foreign function via libffi:~%Symbol not loaded: ~S" ,c-symbol))))))))
 
 (defun ensure-cif (name)
   (let ((fun (find-function name)))

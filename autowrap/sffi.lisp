@@ -425,6 +425,10 @@ call it.  "
   (or (find-type `(:struct (,name)))
       (find-type `(:union (,name)))))
 
+(defun cbv-return-p (fun)
+  (and (foreign-function-cbv-p fun)
+       (not (foreign-scalar-p (foreign-type fun)))))
+
 (defun find-function (name-or-function)
   (if (typep name-or-function 'foreign-function)
       name-or-function
@@ -671,10 +675,10 @@ types."
   (trying to call ~S)"
             ',(foreign-type-name fun))))
 
-(defun make-foreign-funcall (fun param-names vargs)
+(defun make-foreign-funcall (fun return-value param-names vargs)
   (with-slots (c-symbol fields) fun
     (if (foreign-function-cbv-p fun)
-        (funcall *build-libffi-call* fun param-names vargs)
+        (funcall *build-libffi-call* fun return-value param-names vargs)
         (foreign-wrap-up (foreign-type fun) fun
                          `(cffi-sys:%foreign-funcall ,c-symbol
                                                      (,@(loop for f in fields
@@ -699,10 +703,14 @@ types."
       (with-slots (name type c-symbol fields) fun
         (let* ((fun-name (intern (symbol-name name) package))
                (param-names (mapcar #'foreign-type-name fields))
-               (param-syms (mapcar (lambda (x) (gensym (symbol-name x))) param-names)))
+               (param-syms (mapcar (lambda (x) (gensym (symbol-name x))) param-names))
+               (maybe-cbv-return
+                 (when (cbv-return-p fun)
+                   (list 'return-value))))
           (with-gensyms (!fun !fields rest)
             (let ((macro
-                    `(defmacro ,fun-name (,@param-names ,@(when (foreign-function-variadic-p fun) `(&rest ,rest)))
+                    `(defmacro ,fun-name (,@maybe-cbv-return
+                                          ,@param-names ,@(when (foreign-function-variadic-p fun) `(&rest ,rest)))
                        (let ((,!fun (find-function ',name-or-function)))
                          (with-slots ((,!fields fields)) ,!fun
                            (foreign-to-ffi
@@ -710,7 +718,8 @@ types."
                             ',param-syms
                             (list ,@param-names)
                             ,!fields
-                            (make-foreign-funcall ,!fun ',param-syms ,(when (foreign-function-variadic-p fun) rest))))))))
+                            (make-foreign-funcall ,!fun ,(and maybe-cbv-return 'return-value)
+                                                  ',param-syms ,(when (foreign-function-variadic-p fun) rest))))))))
               `(progn
                  ,@(when (foreign-function-cbv-p fun)
                      (list (funcall *build-libffi-definition* fun)))
@@ -1006,14 +1015,18 @@ since CFFI-SYS and thus SFFI use macros for ordinary calls."
       (let ((names (mapcar #'foreign-type-name fields))
             (args (mapcar (lambda (x)
                             (intern (symbol-name (foreign-type-name x))))
-                          fields)))
+                          fields))
+            (maybe-cbv-return (when (cbv-return-p fun)
+                                'return-value)))
+        (when maybe-cbv-return
+          (push maybe-cbv-return args))
         (eval
          `(lambda ,args
             ,(foreign-to-ffi
               (and (car fields) (foreign-type (car fields)))
               names args fields
               (autowrap::make-foreign-funcall
-               fun names
+               fun maybe-cbv-return names
                (when (foreign-function-variadic-p fun)
                  (nthcdr (length fields) args))))))))
     (error "Unknown function: ~S" function-name)))
