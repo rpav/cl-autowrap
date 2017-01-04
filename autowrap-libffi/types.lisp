@@ -88,8 +88,6 @@
       type)))
 
 (defun ensure-libffi-union (ft)
-  (unless (every #'foreign-scalar-p (foreign-record-fields ft))
-    (error "Complex union type: ~S" ft))
   (let ((largest-field (reduce (lambda (x y)
                                  (if (> (frf-bit-size x) (frf-bit-size y)) x y))
                                (foreign-record-fields ft))))
