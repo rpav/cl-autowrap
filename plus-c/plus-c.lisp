@@ -12,16 +12,18 @@
                  (fields autowrap::fields)) fun
       (let ((names (mapcar (lambda (x)
                              (gensym (symbol-name (slot-value x 'autowrap::name))))
-                           fields)))
-       (autowrap::foreign-to-ffi
-        (and (car fields) (foreign-type (car fields)))
-        names
-        args
-        fields
-        (autowrap::make-foreign-funcall
-         fun names
-         (when (foreign-function-variadic-p fun)
-           (nthcdr (length fields) args))))))
+                           fields))
+            (return-value (when (autowrap::cbv-return-p fun)
+                            (pop args))))
+        (autowrap::foreign-to-ffi
+         (and (car fields) (foreign-type (car fields)))
+         names
+         args
+         fields
+         (autowrap::make-foreign-funcall
+          fun return-value names
+          (when (foreign-function-variadic-p fun)
+            (nthcdr (length fields) args))))))
     (error 'c-unknown-function :name name)))
 
  ;; Refs

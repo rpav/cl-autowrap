@@ -1018,10 +1018,10 @@ since CFFI-SYS and thus SFFI use macros for ordinary calls."
                           fields))
             (maybe-cbv-return (when (cbv-return-p fun)
                                 'return-value)))
-        (when maybe-cbv-return
-          (push maybe-cbv-return args))
         (eval
-         `(lambda ,args
+         `(lambda ,(if maybe-cbv-return
+                       (list* maybe-cbv-return args)
+                       args)
             ,(foreign-to-ffi
               (and (car fields) (foreign-type (car fields)))
               names args fields
