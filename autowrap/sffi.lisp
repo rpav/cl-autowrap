@@ -704,26 +704,27 @@ types."
         (let* ((fun-name (intern (symbol-name name) package))
                (param-names (mapcar #'foreign-type-name fields))
                (param-syms (mapcar (lambda (x) (gensym (symbol-name x))) param-names))
+               (cbv-p (foreign-function-cbv-p fun))
                (maybe-cbv-return
                  (when (cbv-return-p fun)
                    (list 'return-value))))
           (with-gensyms (!fun !fields rest)
-            (let ((macro
-                    `(defmacro ,fun-name (,@maybe-cbv-return
-                                          ,@param-names ,@(when (foreign-function-variadic-p fun) `(&rest ,rest)))
-                       (let ((,!fun (find-function ',name-or-function)))
-                         (with-slots ((,!fields fields)) ,!fun
-                           (foreign-to-ffi
-                            (and (car ,!fields) (foreign-type (car ,!fields)))
-                            ',param-syms
-                            (list ,@param-names)
-                            ,!fields
-                            (make-foreign-funcall ,!fun ,(and maybe-cbv-return 'return-value)
-                                                  ',param-syms ,(when (foreign-function-variadic-p fun) rest))))))))
+            (let ((form
+                    `(,(if cbv-p 'defun 'defmacro) ,fun-name (,@maybe-cbv-return
+                                                              ,@param-names ,@(when (foreign-function-variadic-p fun) `(&rest ,rest)))
+                      (let ((,!fun (find-function ',name-or-function)))
+                        (with-slots ((,!fields fields)) ,!fun
+                          (foreign-to-ffi
+                           (and (car ,!fields) (foreign-type (car ,!fields)))
+                           ',param-syms
+                           (list ,@param-names)
+                           ,!fields
+                           (make-foreign-funcall ,!fun ,(and maybe-cbv-return 'return-value)
+                                                 ',param-syms ,(when (foreign-function-variadic-p fun) rest))))))))
               `(progn
                  ,@(when (foreign-function-cbv-p fun)
                      (list (funcall *build-libffi-definition* fun)))
-                 ,macro))))))))
+                 ,form))))))))
 
 (defmacro define-cextern (name &optional (package *package*))
   (with-wrap-attempt ("extern ~S" name) name
