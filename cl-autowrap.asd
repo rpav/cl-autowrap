@@ -41,8 +41,8 @@
     :pathname "spec"
     :components
     ((:static-file "libffi.h")))
-   (:file "autowrap")
    (:file "library")
+   (:file "autowrap")
    (:file "package")
    (:file "types")
    (:file "libffi")))

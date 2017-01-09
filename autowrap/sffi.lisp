@@ -710,17 +710,29 @@ types."
                    (list 'return-value))))
           (with-gensyms (!fun !fields rest)
             (let ((form
-                    `(,(if cbv-p 'defun 'defmacro) ,fun-name (,@maybe-cbv-return
-                                                              ,@param-names ,@(when (foreign-function-variadic-p fun) `(&rest ,rest)))
-                      (let ((,!fun (find-function ',name-or-function)))
-                        (with-slots ((,!fields fields)) ,!fun
-                          (foreign-to-ffi
-                           (and (car ,!fields) (foreign-type (car ,!fields)))
-                           ',param-syms
-                           (list ,@param-names)
-                           ,!fields
-                           (make-foreign-funcall ,!fun ,(and maybe-cbv-return 'return-value)
-                                                 ',param-syms ,(when (foreign-function-variadic-p fun) rest))))))))
+                    (if cbv-p
+                        `(defmacro ,fun-name (,@maybe-cbv-return
+                                              ,@param-names ,@(when (foreign-function-variadic-p fun) `(&rest ,rest)))
+                           (let ((,!fun (find-function ',name-or-function)))
+                             (with-slots ((,!fields fields)) ,!fun
+                               (foreign-to-ffi
+                                (and (car ,!fields) (foreign-type (car ,!fields)))
+                                ',param-syms
+                                (list ,@param-names)
+                                ,!fields
+                                (make-foreign-funcall ,!fun ,(and maybe-cbv-return 'return-value)
+                                                      ',param-syms ,(when (foreign-function-variadic-p fun) rest))))))
+                        `(defun ,fun-name (,@maybe-cbv-return
+                                           ,@param-names ,@(when (foreign-function-variadic-p fun) `(&rest ,rest)))
+                           ,(let ((!fun (find-function name-or-function)))
+                              (with-slots ((!fields fields)) !fun
+                                (foreign-to-ffi
+                                 (and (car !fields) (foreign-type (car !fields)))
+                                 param-syms
+                                 param-names
+                                 !fields
+                                 (make-foreign-funcall !fun (and maybe-cbv-return 'return-value)
+                                                       param-syms (when (foreign-function-variadic-p fun) rest)))))))))
               `(progn
                  ,@(when (foreign-function-cbv-p fun)
                      (list (funcall *build-libffi-definition* fun)))
