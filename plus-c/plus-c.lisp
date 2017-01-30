@@ -205,8 +205,9 @@
 
 (defmethod build-ref ((ref null) (type foreign-array) current-ref rest)
   (if *final-value-set*
-      `(cffi-sys:%mem-set ,*final-value-set* ,current-ref ,(foreign-type type))
-      `(cffi-sys:%mem-ref ,current-ref ,(foreign-type type))))
+      `(cffi-sys:%mem-set ,*final-value-set* ,current-ref
+                          ,(basic-foreign-type (foreign-type type)))
+      `(cffi-sys:%mem-ref ,current-ref ,(basic-foreign-type (foreign-type type)))))
 
 (defmethod build-ref ((ref null) (type foreign-pointer) current-ref rest)
   (build-ref nil :pointer current-ref rest))
