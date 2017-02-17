@@ -336,6 +336,27 @@ functions, or similar, while not necessarily importing everything:
 * `:extern-package PACKAGE`: All "extern" symbols, which are all
   symbols (which are symbol-macros) representing C `extern` symbols
 
+
+#### C2FFI and compile-time constants
+
+Currently `c2ffi` extracts binding information from C-sources in two stages.
+First stage is to look through all the preprocessor macros and extract
+information about all compile-time constants.
+Second stage is to extract information about all the other bindings.
+
+Sometimes `c2ffi` does not get the first stage right
+(by trying to interpret as constants things that are not constants at all).
+
+In this case you may want to manually provide the list of compile-time constants.
+You can do this with `:macro-constants LIST-OF-TYPE-NAME-PAIRS` parameter to `c-include`,
+for example:
+
+```lisp
+(c-include "file.h"
+           :macro-constants '(("char*" "FOO")
+	                      ("long" "BAR")))
+```
+
 ## Wrappers and FFI
 
 At this point you probably have definitions generated (or are
