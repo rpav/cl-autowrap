@@ -13,12 +13,6 @@
              (with-slots (typespec) c
                (format s "~@<Undefined foreign type: ~A~:@>" typespec)))))
 
-(define-condition note-error (autowrap-continuable-error)
-  ((note                     :initarg :note))
-  (:report (lambda (c s)
-             (with-slots (note) c
-               (format s "~@<Note: ~A~:@>" note)))))
-
 (define-condition undefined-foreign-type-contextualised (undefined-foreign-type)
   ((context-format-control   :initarg :context-format-control)
    (context-format-arguments :initarg :context-format-arguments))
