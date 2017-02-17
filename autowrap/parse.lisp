@@ -392,9 +392,9 @@ Return the appropriate CFFI name."))
                      sysincludes
                      (definition-package *package*)
                      (function-package definition-package)
-                     (wrapper-package definition-package)
+                     (wrapper-package function-package)
                      (accessor-package wrapper-package)
-                     (constant-package definition-package)
+                     (constant-package accessor-package)
                      (extern-package accessor-package)
                      constant-accessor exclude-constants
                      (trace-c2ffi *trace-c2ffi*) no-accessors no-functions
