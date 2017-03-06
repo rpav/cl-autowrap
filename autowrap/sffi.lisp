@@ -640,6 +640,7 @@ types."
        (if *inhibit-string-conversion*
            (values "" ,ptr)
            (values
+            ;; FOREIGN-STRING-TO-LISP will return NIL for a null pointer
             (cffi:foreign-string-to-lisp ,ptr)
             ,ptr)))))
 
@@ -691,11 +692,8 @@ types."
                                                      :convention :cdecl)))))
 
 (defvar *build-libffi-definition*
-  (lambda (fun &rest r)
-    (declare (ignore r))
-    `(error "Call-by-value not implemented without loading cl-autowrap/libffi
-  (trying to call ~S)"
-            ',(foreign-type-name fun))))
+  (lambda (&rest r)
+    (declare (ignore r))))
 
 (defmacro define-cfun (name-or-function &optional (package *package*))
   (when-let ((fun (find-function name-or-function)))
@@ -704,8 +702,7 @@ types."
         (let* ((fun-name (intern (symbol-name name) package))
                (param-names (mapcar #'foreign-type-name fields))
                (param-syms (mapcar (lambda (x) (gensym (symbol-name x))) param-names))
-               (make-function-p (or (not (foreign-function-variadic-p fun))
-                                    (foreign-function-cbv-p fun)))
+               (make-function-p (not (foreign-function-variadic-p fun)))
                (maybe-cbv-return
                  (when (cbv-return-p fun)
                    (list 'return-value))))
