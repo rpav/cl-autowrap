@@ -1,3 +1,35 @@
+# Now with libffi!
+
+Using its own facilities, autowrap now includes `autowrap/libffi`.
+This allows functions that pass and return structs to be called using
+autowrap.  To use this, just load or `:depends-on`
+`cl-autowrap/libffi` instead of `cl-autowrap`:
+
+```lisp
+
+  :depends-on (... :cl-autowrap/libffi ...)
+  ...
+```
+
+Of course, this requires `libffi` be compiled and available to your
+lisp.
+
+Usage mostly identical; functions called via libffi look and act the
+same as any others.  The one exception is functions that *return* a
+struct by value:
+
+```lisp
+(c-with ((return-value some-struct))
+  (some-call-returning-some-struct return-value ...))
+```
+
+Calls returning a struct take the return as their first parameter.
+This should be evident in SLIME/Sly.  This ultimately allows easier
+management of freeing as well as more control over where they're
+stored.  (They *also* still return the value, if you're trying to
+chain calls.)
+
+
 # Issues?
 
 If you have issues, do not hesitate to [file an
