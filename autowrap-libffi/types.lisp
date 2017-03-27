@@ -1,30 +1,36 @@
 (in-package :autowrap)
 
-;;; Repurposed from alloc.lisp ;)
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (unless (> (hash-table-count *libffi-type-map*) 0)
-    (let (unsigned signed)
+    (let (signed unsigned signed-sizes unsigned-sizes)
+      (map nil
+           (lambda (x y z)
+             (push (cons x y) signed)
+             (push (cons x z) unsigned))
+           '(1 2 4 8)
+           (list ffi-type-sint8 ffi-type-sint16 ffi-type-sint32 ffi-type-sint64)
+           (list ffi-type-uint8 ffi-type-uint16 ffi-type-uint32 ffi-type-uint64))
+
       (map nil
            (lambda (x)
-             (push (cons (foreign-type-size x) x) unsigned))
-           '(:unsigned-char :unsigned-short :unsigned-int :unsigned-long :unsigned-long-long))
-      (map nil
-           (lambda (x)
-             (push (cons (foreign-type-size x) x) signed))
+             (push (cons x (foreign-type-size x)) signed-sizes))
            '(:char :short :int :long :long-long))
-      (setf (gethash :pointer *libffi-type-map*) ffi-type-pointer)
-      (setf (gethash :void *libffi-type-map*) ffi-type-void)
-      (setf (gethash :float *libffi-type-map*) ffi-type-float)
-      (setf (gethash :double *libffi-type-map*) ffi-type-double)
-      (setf (gethash :long-double *libffi-type-map*) ffi-type-longdouble)
-      (setf (gethash (aval 1 signed) *libffi-type-map*)  ffi-type-sint8)
-      (setf (gethash (aval 1 unsigned) *libffi-type-map*)  ffi-type-uint8)
-      (setf (gethash (aval 2 signed) *libffi-type-map*)  ffi-type-sint16)
-      (setf (gethash (aval 2 unsigned) *libffi-type-map*)  ffi-type-uint16)
-      (setf (gethash (aval 4 signed) *libffi-type-map*)  ffi-type-sint32)
-      (setf (gethash (aval 4 unsigned) *libffi-type-map*)  ffi-type-uint32)
-      (setf (gethash (aval 8 signed) *libffi-type-map*)  ffi-type-sint64)
-      (setf (gethash (aval 8 unsigned) *libffi-type-map*)  ffi-type-uint64))))
+      (map nil
+           (lambda (x)
+             (push (cons x (foreign-type-size x)) unsigned-sizes))
+           '(:unsigned-char :unsigned-short :unsigned-int :unsigned-long :unsigned-long-long))
+
+      (loop for (type . size) in signed-sizes
+            do (setf (gethash type *libffi-type-map*) (aval size signed)))
+      (loop for (type . size) in unsigned-sizes
+            do (setf (gethash type *libffi-type-map*) (aval size unsigned)))
+
+      (progn
+        (setf (gethash :pointer *libffi-type-map*) ffi-type-pointer)
+        (setf (gethash :void *libffi-type-map*) ffi-type-void)
+        (setf (gethash :float *libffi-type-map*) ffi-type-float)
+        (setf (gethash :double *libffi-type-map*) ffi-type-double)
+        (setf (gethash :long-double *libffi-type-map*) ffi-type-longdouble)))))
 
 (defgeneric ensure-libffi-type (foreign-type)
   (:documentation "Find or create a libffi equivalent of `FOREIGN-TYPE`."))
