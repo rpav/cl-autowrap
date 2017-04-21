@@ -142,7 +142,11 @@ its contents initialized to zero.  Freeing is up to you!"
   (etypecase type
     (keyword
      (cffi-sys:%mem-ref (c-aptr wrapper index type) type))
-    (t (wrap-pointer (c-aptr wrapper index type) type wrapper))))
+    (t (let ((meta-type (find-type type)))
+             (if (and (typep meta-type 'foreign-alias) (keywordp (foreign-type meta-type)))
+                 (let ((aliased (foreign-type meta-type)))
+                   (cffi-sys:%mem-ref (c-aptr wrapper index aliased) aliased))
+                 (wrap-pointer (c-aptr wrapper index type) type wrapper))))))
 
 (define-compiler-macro c-aref (&whole whole wrapper index
                                       &optional type)
@@ -150,8 +154,12 @@ its contents initialized to zero.  Freeing is up to you!"
       (etypecase (eval type)
         (keyword
          `(cffi-sys:%mem-ref (c-aptr ,wrapper ,index ,type) ,type))
-        (t (once-only (wrapper)
-             `(wrap-pointer (c-aptr ,wrapper ,index ,type) ,type ,wrapper))))
+        (t (let ((meta-type (find-type (eval type))))
+             (if (and (typep meta-type 'foreign-alias) (keywordp (foreign-type meta-type)))
+                 (let ((aliased (foreign-type meta-type)))
+                   `(cffi-sys:%mem-ref (c-aptr ,wrapper ,index ,aliased) ,aliased))
+                 (once-only (wrapper)
+                   `(wrap-pointer (c-aptr ,wrapper ,index ,type) ,type ,wrapper))))))
       whole))
 
 (defun (setf c-aref) (v ptr index type)
