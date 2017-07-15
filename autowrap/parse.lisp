@@ -164,6 +164,9 @@ Return the appropriate CFFI name."))
 (defmethod parse-type (form (tag (eql :signed-char)))
   '(:char))
 
+(defmethod parse-type (form (tage (eql :long-double)))
+  '(long-double))
+
 (defmethod parse-type (form (tag (eql :_bool)))
   (case (aval :bit-size form)
     ((8 nil) '(:unsigned-char))
