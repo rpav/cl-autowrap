@@ -108,7 +108,7 @@ doesn't exist, we will get a return code other than 0."
                        :output *standard-output*
                        :ignore-error-status ignore-error-status)
             (with-open-file (raw-input tmp-raw-output)
-              (with-open-file (final-output output-spec :direction :output)
+              (with-open-file (final-output output-spec :direction :output :if-exists :supersede)
                 (funcall spec-processor raw-input final-output)))))))))
  ;; Specs and Loading
 
@@ -126,7 +126,8 @@ if the file does not exist."
                           (spec-path *default-pathname-defaults*)
                           arch-excludes
                           sysincludes
-                          version)
+                          version
+                          spec-processor)
   (flet ((spec-path (arch) (string+ (namestring spec-path)
                                     (pathname-name name)
                                     (if version
@@ -143,7 +144,8 @@ if the file does not exist."
             (let ((arch (local-arch)))
               (run-c2ffi name (spec-path arch)
                          :arch arch
-                         :sysincludes sysincludes))
+                         :sysincludes sysincludes
+                         :spec-processor spec-processor))
             (loop with local-arch = (local-arch)
                   for arch in *known-arches* do
                     (unless (or (string= local-arch arch)
@@ -151,7 +153,8 @@ if the file does not exist."
                       (unless (run-c2ffi name (spec-path arch)
                                          :arch arch
                                          :sysincludes sysincludes
-                                         :ignore-error-status t)
+                                         :ignore-error-status t
+                                         :spec-processor spec-processor)
                         (warn "Error generating spec for other arch: ~S" arch))))
             (if-let (h-name (find-local-spec name spec-path))
               h-name

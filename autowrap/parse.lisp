@@ -343,20 +343,13 @@ Return the appropriate CFFI name."))
                   (eval (caddr x))))
           list))
 
-(defun read-parse-forms (in-spec exclude-definitions exclude-sources
-                         include-definitions include-sources)
+(defun read-parse-forms (in-spec)
   (loop for form in (read-json in-spec)
         as name = (aval :name form)
         as location = (aval :location form)
-        unless
-        (and (or (included-p name exclude-definitions)
-                 (and (included-p location exclude-sources)
-                      (not (included-p name include-definitions))))
-             (not (or (included-p name include-definitions)
-                      (and (included-p location include-sources)
-                           (not (included-p name exclude-definitions))))))
         collect (parse-form form (aval :tag form)) into forms
         finally (return (remove-if #'null forms))))
+
 
 (defun make-define-list (def-symbol list package)
  (loop for x in (reverse list)
@@ -413,8 +406,10 @@ Return the appropriate CFFI name."))
         (*foreign-c-to-lisp-function* (or (and c-to-lisp-function
                                                (eval c-to-lisp-function))
                                           *foreign-c-to-lisp-function*))
-        (exclude-definitions (mapcar #'ppcre:create-scanner exclude-definitions))
-        (exclude-sources (mapcar #'ppcre:create-scanner exclude-sources))
+        (*include-definitions* include-definitions)
+        (*include-sources* include-sources)
+        (*exclude-definitions* (mapcar #'ppcre:create-scanner exclude-definitions))
+        (*exclude-sources* (mapcar #'ppcre:create-scanner exclude-sources))
         (*package* (find-package definition-package))
         (h-file (path-or-asdf (eval h-file)))
         (spec-path (path-or-asdf (eval spec-path)))
@@ -433,7 +428,8 @@ Return the appropriate CFFI name."))
                              :spec-path spec-path
                              :arch-excludes exclude-arch
                              :sysincludes sysincludes
-                             :version version))
+                             :version version
+                             :spec-processor #'squash-unrelated-definitions))
       (with-open-file (in-spec spec-name)
         (collecting-symbols
           `(progn
@@ -448,13 +444,11 @@ Return the appropriate CFFI name."))
                ;; being a toplevel form as of 1.1.9 and will crash.
                #-sbcl
                (with-anonymous-indexing
-                 ,@(read-parse-forms in-spec exclude-definitions exclude-sources
-                                     include-definitions include-sources))
+                 ,@(read-parse-forms in-spec))
                #+sbcl
                (progn
                  (setf *foreign-record-index* (make-hash-table))
-                 ,@(read-parse-forms in-spec exclude-definitions exclude-sources
-                                     include-definitions include-sources)
+                 ,@(read-parse-forms in-spec)
                  (setf *foreign-record-index* nil))
                ;; Map constants
                ,@(when constant-accessor

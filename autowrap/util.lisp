@@ -2,6 +2,11 @@
 
  ;; misc
 
+(declaim (special *include-definitions*
+                  *exclude-definitions*
+                  *include-sources*
+                  *exclude-sources*))
+
 (defun substr* (str start &optional end)
   "Make a shared substring of STR using MAKE-ARRAY :displaced-to"
   (let* ((end (or end (length str)))
@@ -84,6 +89,14 @@
       (when (cl-ppcre:scan scanner thing)
         (return t)))))
 
+(defun excluded-p (name location)
+  (and (or (included-p name *exclude-definitions*)
+           (and (included-p location *exclude-sources*)
+                (not (included-p name *include-definitions*))))
+       (not (or (included-p name *include-definitions*)
+                (and (included-p location *include-sources*)
+                     (not (included-p name *exclude-definitions*)))))))
+
 (defun anonymous-p (form)
   (etypecase form
     (foreign-type
@@ -133,7 +146,7 @@
 ;; from pergamum
 (defmacro define-simple-error-for (base-type &key name object-initarg)
   "Define a simple error subclassing from BASE-TYPE and a corresponding
-function, analogous to ERROR, but also optionally taking the object 
+function, analogous to ERROR, but also optionally taking the object
 against which to err, and passing it to ERROR via the OBJECT-INITARG
 keyword. The name of the simple error is constructed by prepending
 'SIMPLE-' to BASE-TYPE.
