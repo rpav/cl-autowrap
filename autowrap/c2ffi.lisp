@@ -62,6 +62,11 @@
 doesn't exist, we will get a return code other than 0."
   (zerop (nth-value 2 (uiop:run-program `(,*c2ffi-program* "-h") :ignore-error-status t))))
 
+
+(defun pass-through-processor (input output)
+  (uiop:copy-stream-to-stream input output :element-type 'base-char))
+
+
 ;;; UIOP:WITH-TEMPORARY-FILE does not seem to compile below as of asdf
 ;;; 3.1.5, and that's what SBCL is distributed with, so.
 (defmacro with-temporary-file ((&key pathname keep (stream (gensym "STREAM") streamp)) &body body)
@@ -71,7 +76,8 @@ doesn't exist, we will get a return code other than 0."
       ,@body)
     :keep ,keep))
 
-(defun run-c2ffi (input-file output-basename &key arch sysincludes ignore-error-status)
+(defun run-c2ffi (input-file output-basename &key arch sysincludes ignore-error-status
+                                               (spec-processor #'pass-through-processor))
   "Run c2ffi on `INPUT-FILE`, outputting to `OUTPUT-FILE` and
 `MACRO-OUTPUT-FILE`, optionally specifying a target triple `ARCH`."
   (with-temporary-file (:pathname tmp-macro-file
@@ -94,12 +100,16 @@ doesn't exist, we will get a return code other than 0."
           (format tmp-include-file-stream "#include \"~A\"~%" input-file)
           (format tmp-include-file-stream "#include \"~A\"~%" tmp-macro-file)
           (close tmp-include-file-stream)
-          ;; Invoke c2ffi again to generate the final output.
-          (run-check *c2ffi-program* (list* (namestring tmp-include-file) "-o" output-spec
-                                            (append arch sysincludes))
-                     :output *standard-output*
-                     :ignore-error-status ignore-error-status))))))
-
+          ;; Invoke c2ffi again to generate the raw output.
+          (with-temporary-file (:pathname tmp-raw-output)
+            (run-check *c2ffi-program* (list* (namestring tmp-include-file)
+                                              "-o" (namestring tmp-raw-output)
+                                              (append arch sysincludes))
+                       :output *standard-output*
+                       :ignore-error-status ignore-error-status)
+            (with-open-file (raw-input tmp-raw-output)
+              (with-open-file (final-output output-spec :direction :output)
+                (funcall spec-processor raw-input final-output)))))))))
  ;; Specs and Loading
 
 (defun find-local-spec (name &optional (spec-path *default-pathname-defaults*))
