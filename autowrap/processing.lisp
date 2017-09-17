@@ -40,19 +40,22 @@ of array type taking all the struct available space"
   (loop for field in (aval :fields descriptor)
      append (extract-type (aval :type field))))
 
-(defun extract-type (type-descriptor)
-  (switch ((aval :tag type-descriptor) :test #'equal)
-    (":pointer" (list (extract-type (aval :type type-descriptor))))
-    ("struct" (list (aval :name type-descriptor)))
-    (":struct" (list (aval :name type-descriptor)))
-    ("union" (extract-field-types type-descriptor))
-    (":enum" (list (aval :name type-descriptor)))
-    (t (list (aval :tag type-descriptor)))))
-
 (defun extract-function-types (descriptor)
   (cons (extract-type (aval :return-type descriptor))
         (loop for parameter in (aval :parameters descriptor)
            collect (extract-type (aval :type parameter)))))
+
+(defun extract-struct-types (descriptor)
+  (cons (aval :name descriptor) (extract-field-types descriptor)))
+
+(defun extract-type (type-descriptor)
+  (switch ((aval :tag type-descriptor) :test #'equal)
+    (":pointer" (list (extract-type (aval :type type-descriptor))))
+    ("struct" (extract-struct-types type-descriptor))
+    (":struct" (extract-struct-types type-descriptor))
+    ("union" (extract-field-types type-descriptor))
+    (":enum" (list (aval :name type-descriptor)))
+    (t (list (aval :tag type-descriptor)))))
 
 (defun extract-dependent-types (descriptor)
   (switch ((aval :tag descriptor) :test #'equal)
