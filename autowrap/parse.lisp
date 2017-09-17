@@ -13,6 +13,8 @@
 (defvar *foreign-symbol-exceptions* nil)
 (defvar *foreign-symbol-regex* nil)
 
+(declaim (special *filter-spec-p*))
+
  ;; Collecting symbols
 
 (defmacro collecting-symbols (&body body)
@@ -347,6 +349,7 @@ Return the appropriate CFFI name."))
   (loop for form in (read-json in-spec)
         as name = (aval :name form)
         as location = (aval :location form)
+        when (or *filter-spec-p* (not (excluded-p name location)))
         collect (parse-form form (aval :tag form)) into forms
         finally (return (remove-if #'null forms))))
 
@@ -394,7 +397,7 @@ Return the appropriate CFFI name."))
                      (extern-package accessor-package)
                      constant-accessor exclude-constants
                      (trace-c2ffi *trace-c2ffi*) no-accessors no-functions
-                     release-p version
+                     release-p version filter-spec-p
                      type-symbol-function c-to-lisp-function)
   (let ((*foreign-symbol-exceptions* (alist-hash-table symbol-exceptions :test 'equal))
         (*foreign-symbol-regex* (make-scanners symbol-regex))
@@ -411,6 +414,7 @@ Return the appropriate CFFI name."))
         (*exclude-definitions* (mapcar #'ppcre:create-scanner exclude-definitions))
         (*exclude-sources* (mapcar #'ppcre:create-scanner exclude-sources))
         (*package* (find-package definition-package))
+        (*filter-spec-p* filter-spec-p)
         (h-file (path-or-asdf (eval h-file)))
         (spec-path (path-or-asdf (eval spec-path)))
         (sysincludes (eval sysincludes))
@@ -429,7 +433,9 @@ Return the appropriate CFFI name."))
                              :arch-excludes exclude-arch
                              :sysincludes sysincludes
                              :version version
-                             :spec-processor #'squash-unrelated-definitions))
+                             :spec-processor (if *filter-spec-p*
+                                                 #'squash-unrelated-definitions
+                                                 #'pass-through-processor)))
       (with-open-file (in-spec spec-name)
         (collecting-symbols
           `(progn
