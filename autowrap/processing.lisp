@@ -2,6 +2,8 @@
 
 
 (defun make-stub-struct (descriptor)
+  "Copies bit information from descriptor and returns a struct descriptor that have single field
+of array type taking all the struct available space"
   (flet ((%val (name)
            (aval name descriptor))
          (make-descriptor (&rest pairs &key &allow-other-keys)
@@ -59,6 +61,7 @@
     ("function" (extract-function-types descriptor))))
 
 (defun fill-name-set (raw-spec name-set)
+  "Extracts included names and their first-level dependencies into a set"
   (loop for form in raw-spec
        as name = (aval :name form)
        as location = (aval :location form)
@@ -68,6 +71,12 @@
              do (setf (gethash name name-set) t))))
 
 (defun follow-typedefs (raw-spec name-set)
+  "Adds typedef'ed type names into provided name set. Only existing typedef names are
+added. E.g.
+
+typedef original_t dependent_t;
+
+Here 'original_t' name would be added only if 'dependent_t' already present in the name set"
   (loop with unregistered-typedef-found-p = nil
      for descriptor in raw-spec
      as tag = (aval :tag descriptor)
@@ -93,6 +102,8 @@
         descriptor)))
 
 (defun squash-unrelated-definitions (input-spec-stream output-spec-stream)
+  "Filters descriptors leaving only included ones and their dependencies. Stubs low-level
+excluded structures essentially making them opaque bit-blobs."
   (let* ((raw-spec (read-json input-spec-stream))
          (name-set (extract-included-name-set raw-spec))
          (descriptors (loop for descriptor in raw-spec
