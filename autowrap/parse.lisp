@@ -391,7 +391,7 @@ Return the appropriate CFFI name."))
 (defmacro c-include (h-file &key (spec-path *default-pathname-defaults*)
                      symbol-exceptions symbol-regex
                      exclude-definitions exclude-sources exclude-arch
-                     include-definitions include-sources
+                     include-definitions include-sources include-arch
                      sysincludes
                      (definition-package *package*)
                      (function-package definition-package)
@@ -432,6 +432,7 @@ Return the appropriate CFFI name."))
           (ensure-local-spec h-file
                              :spec-path spec-path
                              :arch-excludes exclude-arch
+                             :arch-includes include-arch
                              :sysincludes sysincludes
                              :version version))
       (with-open-file (in-spec spec-name)
