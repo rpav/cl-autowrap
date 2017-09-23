@@ -8,6 +8,8 @@
 ;;; Note this is rather untested and not very extensive at the moment;
 ;;; it should probably work on linux/win/osx though.  Patches welcome.
 
+(declaim (special *local-os*))
+
 (defun local-cpu ()
   #+x86-64 "x86_64"
   #+(and (not (or x86-64 freebsd)) x86) "i686"
@@ -20,11 +22,12 @@
   #+(not (or linux windows darwin)) "-unknown")
 
 (defun local-os ()
-  #+linux "-linux"
-  #+windows "-windows-msvc"
-  #+darwin "-darwin9"
-  #+freebsd "-freebsd"
-  #+openbsd "-openbsd")
+  (or (and *local-os* (format nil "-~A" *local-os*))
+      #+linux "-linux"
+      #+windows "-windows-msvc"
+      #+darwin "-darwin9"
+      #+freebsd "-freebsd"
+      #+openbsd "-openbsd"))
 
 (defun local-environment ()
   #+linux "-gnu"
@@ -38,6 +41,8 @@
     "x86_64-pc-linux-gnu"
     "i686-pc-windows-msvc"
     "x86_64-pc-windows-msvc"
+    "i686-pc-windows-gnu"
+    "x86_64-pc-windows-gnu"
     "i686-apple-darwin9"
     "x86_64-apple-darwin9"
     "i386-unknown-freebsd"

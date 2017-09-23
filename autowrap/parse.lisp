@@ -398,7 +398,8 @@ Return the appropriate CFFI name."))
                      constant-accessor exclude-constants
                      (trace-c2ffi *trace-c2ffi*) no-accessors no-functions
                      release-p version filter-spec-p
-                     type-symbol-function c-to-lisp-function)
+                     type-symbol-function c-to-lisp-function
+                     local-os)
   (let ((*foreign-symbol-exceptions* (alist-hash-table symbol-exceptions :test 'equal))
         (*foreign-symbol-regex* (make-scanners symbol-regex))
         (*foreign-constant-excludes* (mapcar #'ppcre:create-scanner exclude-constants))
@@ -418,6 +419,7 @@ Return the appropriate CFFI name."))
         (h-file (path-or-asdf (eval h-file)))
         (spec-path (path-or-asdf (eval spec-path)))
         (sysincludes (eval sysincludes))
+        (*local-os* (eval local-os))
         (definition-package (find-package definition-package))
         (function-package (find-package function-package))
         (wrapper-package (find-package wrapper-package))

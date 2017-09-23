@@ -1,41 +1,79 @@
 (in-package :autowrap)
 
 
-(defun make-stub-struct (descriptor)
-  "Copies bit information from descriptor and returns a struct descriptor that have single field
-of array type taking all the struct available space"
-  (flet ((%val (name)
-           (aval name descriptor))
-         (make-descriptor (&rest pairs &key &allow-other-keys)
-           (plist-alist pairs)))
-    (let ((bit-size (%val :bit-size))
-          (bit-alignment (%val :bit-alignment)))
-      (multiple-value-bind (byte-size remainder) (floor (/ bit-size 8))
-        (unless (= remainder 0)
-          (error "Unexpected bitsize: expected multiple of 8, but got ~a" bit-size))
-        (make-descriptor
-         :tag "struct"
-         :ns (%val :ns)
-         :name (%val :name)
-         :id (%val :id)
-         :location (%val :location)
-         :bit-size bit-size
-         :bit-alignment bit-alignment
-         :fields (vector (make-descriptor
-                          :tag "field"
-                          :name "_data"
-                          :bit-offset 0
-                          :bit-size bit-size
-                          :bit-alignment bit-alignment
-                          :type (make-descriptor
-                                 :tag ":array"
-                                 :size byte-size
-                                 :type (make-descriptor
-                                        :tag ":char"
-                                        :bit-size 8
-                                        :bit-alignment 8)))))))))
+;;;
+;;; Dependency graph
+;;;
+(defstruct (type-dependency
+             (:type list))
+  (weak-p nil)
+  (dependent-name "" :type string))
 
+(defun make-dependency-graph ()
+  (make-hash-table :test 'equal))
 
+(defun name-exist-p (graph name)
+  (nth-value 1 (gethash name graph)))
+
+(defun register-type (graph name)
+  (unless (name-exist-p graph name)
+    (setf (gethash name graph) nil)))
+
+(defun register-dependency (graph type-name dependent-type-name &key weak-p)
+  (pushnew (make-type-dependency :weak-p weak-p
+                                 :dependent-name dependent-type-name)
+           (gethash type-name graph)
+           :test 'equal)
+  (unless (nth-value 1 (gethash dependent-type-name graph))
+    (setf (gethash dependent-type-name graph) nil)))
+
+(defun exclude-type (graph name)
+  (let ((children (gethash name graph)))
+    (remhash name graph)
+    (loop for child in children
+       unless (type-dependency-weak-p child)
+       do (exclude-type graph child))))
+
+(defun traverse-dependencies (graph root-name probe)
+  (labels ((%traverse-children (root-name extended-path)
+             (loop for dependent in (gethash root-name graph)
+                as name = (type-dependency-dependent-name dependent)
+                as weak-dep = (type-dependency-weak-p dependent)
+                as (result stop-traverse-p) =
+                  (if weak-dep
+                      (list nil nil)
+                      (multiple-value-list (%traverse-graph name extended-path)))
+                until stop-traverse-p
+                finally (return (values result stop-traverse-p))))
+           (%traverse-graph (root-name path)
+             (if (member root-name path :test 'equal)
+                 (values nil nil)
+                 (multiple-value-bind (result stop-p) (funcall probe root-name)
+                   (if stop-p
+                       (values result t)
+                       (%traverse-children root-name (cons root-name path)))))))
+    (%traverse-graph root-name nil)))
+
+;;;
+;;; Inclusion rules
+;;;
+(defun explicitly-included-p (name location)
+  (or (included-p name *include-definitions*)
+      (and (included-p location *include-sources*)
+           (not (included-p name *exclude-definitions*)))))
+
+(defun explicitly-excluded-p (name location)
+  (or (included-p name *exclude-definitions*)
+      (and (included-p location *exclude-sources*)
+           (not (included-p name *include-definitions*)))))
+
+(defun finally-included-p (name location)
+  (and (explicitly-included-p name location)
+       (not (explicitly-excluded-p name location))))
+
+;;;
+;;; Type extraction
+;;;
 (defun extract-field-types (descriptor)
   (loop for field in (aval :fields descriptor)
      append (extract-type (aval :type field))))
@@ -50,66 +88,83 @@ of array type taking all the struct available space"
 
 (defun extract-type (type-descriptor)
   (switch ((aval :tag type-descriptor) :test #'equal)
+    (":array" (extract-type (aval :type type-descriptor)))
     (":pointer" (extract-type (aval :type type-descriptor)))
     ("struct" (extract-struct-types type-descriptor))
     (":struct" (extract-struct-types type-descriptor))
     ("union" (extract-field-types type-descriptor))
     (":enum" (list (aval :name type-descriptor)))
+    ("enum" (list (aval :name type-descriptor)))
     (t (list (aval :tag type-descriptor)))))
 
-(defun extract-dependent-types (descriptor)
+(defun extract-dependencies (descriptor)
   (switch ((aval :tag descriptor) :test #'equal)
     ("typedef" (extract-type (aval :type descriptor)))
     ("struct" (extract-field-types descriptor))
     ("function" (extract-function-types descriptor))))
 
-(defun fill-name-set (raw-spec name-set)
-  "Extracts included names and their first-level dependencies into a set"
-  (loop for form in raw-spec
-       as name = (aval :name form)
-       as location = (aval :location form)
-       unless (excluded-p name location)
-       do (loop for name in (cons name (extract-dependent-types form))
-             unless (or (emptyp name) (starts-with #\: name))
-             do (setf (gethash name name-set) t))))
+(defun extract-types (raw-spec)
+  "Extracts names and their first-level dependencies into a graph."
+  (loop with dependency-graph = (make-dependency-graph)
+     with types = (make-hash-table :test 'equal)
+     for form in raw-spec
+     as name = (aval :name form)
+     as tag = (aval :tag form)
+     as location = (aval :location form)
+     do (let ((weak-dependency-p (equal "struct" tag)))
+          (setf (gethash name types) form)
+          (register-type dependency-graph name)
+          (loop for dependency in (extract-dependencies form)
+             unless (or (emptyp dependency)
+                        (starts-with #\: dependency))
+                 do (register-dependency dependency-graph dependency name :weak-p weak-dependency-p)))
+     finally (return (values dependency-graph types))))
 
-(defun follow-typedefs (raw-spec name-set)
-  "Adds typedef'ed type names into provided name set. Only existing typedef names are
-added. E.g.
+(defun filter-types (types dependencies)
+  "Leaves only included names and their dependencies unless explicitly excluded."
+  (flet ((name-included (name)
+           (let ((location (aval :location (gethash name types))))
+             (if (explicitly-included-p name location)
+                 (values t t)
+                 (values nil nil)))))
+    (loop for name being the hash-key of types
+       as location = (aval :location (gethash name types))
+         when (or (explicitly-excluded-p name location)
+                  (not (traverse-dependencies dependencies name #'name-included)))
+         do (exclude-type dependencies name)
+       finally (return dependencies))))
 
-typedef original_t dependent_t;
+;;;
+;;; Spec filtering
+;;;
+(defun filter-struct-fields (descriptor dependencies)
+  (let ((fields (loop for field in (aval :fields descriptor)
+                   as type-descriptor = (aval :type field)
+                   when (loop for name in (extract-type type-descriptor)
+                           thereis (or (starts-with #\: name)
+                                       (name-exist-p dependencies name)))
+                   collect (let ((inner-descriptor (process-descriptor type-descriptor dependencies)))
+                             (prog1 field
+                               (setf (aval :type field) inner-descriptor))))))
+    (setf (aval :fields descriptor) fields)
+    descriptor))
 
-Here 'original_t' name would be added only if 'dependent_t' already present in the name set"
-  (loop with unregistered-typedef-found-p = nil
-     for descriptor in raw-spec
-     as tag = (aval :tag descriptor)
-     as name = (aval :name descriptor)
-     when (and (equal "typedef" tag) (gethash name name-set))
-     do (loop for type in (extract-type (aval :type descriptor))
-           unless (gethash type name-set)
-           do (setf unregistered-typedef-found-p t
-                    (gethash type name-set) t))
-     finally (return unregistered-typedef-found-p)))
-
-(defun extract-included-name-set (raw-spec)
-  (let ((name-set (make-hash-table :test 'equal)))
-    (fill-name-set raw-spec name-set)
-    (loop while (follow-typedefs raw-spec name-set))
-    name-set))
-
-(defun process-descriptor (descriptor)
-  (let ((type (aval :tag descriptor)))
-    (if (and (excluded-p (aval :name descriptor) (aval :location descriptor))
-             (equal "struct" type))
-        (make-stub-struct descriptor)
-        descriptor)))
+(defun process-descriptor (descriptor dependencies)
+  (let ((type (and descriptor (aval :tag descriptor))))
+    (cond
+      ((or (equal "struct" type)
+           (equal "union" type))
+       (filter-struct-fields descriptor dependencies))
+      (t descriptor))))
 
 (defun squash-unrelated-definitions (input-spec-stream output-spec-stream)
-  "Filters descriptors leaving only included ones and their dependencies. Stubs low-level
-excluded structures essentially making them opaque bit-blobs."
-  (let* ((raw-spec (read-json input-spec-stream))
-         (name-set (extract-included-name-set raw-spec))
-         (descriptors (loop for descriptor in raw-spec
-                         when (gethash (aval :name descriptor) name-set)
-                         collect (process-descriptor descriptor))))
-    (json:encode-json descriptors output-spec-stream)))
+  "Filters descriptors leaving only included ones and their dependencies."
+  (let ((raw-spec (read-json input-spec-stream)))
+    (multiple-value-bind (dependencies types) (extract-types raw-spec)
+      (let* ((filtered-dependencies (filter-types types dependencies))
+             (descriptors (loop for descriptor in raw-spec
+                             as name = (aval :name descriptor)
+                             when (or (emptyp name)
+                                      (name-exist-p filtered-dependencies name))
+                             collect (process-descriptor descriptor filtered-dependencies))))
+        (json:encode-json descriptors output-spec-stream)))))

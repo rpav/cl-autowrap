@@ -43,9 +43,11 @@
 
  ;; alists
 
-(declaim (inline akey aval))
+(declaim (inline akey aval (setf aval)))
 (defun akey (val alist &key (test 'eql)) (car (rassoc val alist :test test)))
 (defun aval (key alist &key (test 'eql)) (cdr (assoc key alist :test test)))
+(defun (setf aval) (value key alist &key (test 'eql))
+  (setf (cdr (assoc key alist :test test)) value))
 
 (defmacro alist-bind ((&rest vars) alist &body body)
   "Inefficient but doesn't really matter here"
