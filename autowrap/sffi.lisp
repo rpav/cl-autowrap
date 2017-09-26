@@ -562,11 +562,13 @@ Create a type from `TYPESPEC` and return the `TYPE` structure representing it."
 
 (defmethod foreign-to-ffi (type names params fields body)
   `(let ((,(car names) ,(car params)))
+     (declare (ignorable ,(car names)))
      ,(next-ffi)))
 
 ;;; Record by value.. just pass through the pointer
 (defmethod foreign-to-ffi ((type foreign-record) names params fields body)
   `(let ((,(car names) ,(car params)))
+     (declare (ignorable ,(car names)))
      ,(next-ffi)))
 
 (defmethod foreign-to-ffi ((type foreign-enum) names params fields body)
@@ -584,16 +586,19 @@ Create a type from `TYPESPEC` and return the `TYPE` structure representing it."
                      (symbol (enum-value ',type-name ,name))
                      (integer ,name)))))))
     `(let ((,name ,expansion))
+       (declare (ignorable ,name))
        ,(next-ffi))))
 
 (defmethod foreign-to-ffi ((type foreign-alias) names params fields body)
   (if (eq :pointer (basic-foreign-type type))
       `(let ((,(car names) (autowrap:ptr ,(car params))))
+         (declare (ignorable ,(car names)))
          ,(next-ffi))
       (foreign-to-ffi (foreign-type type) names params fields body)))
 
 (defmethod foreign-to-ffi ((type foreign-pointer) names params fields body)
   `(let ((,(car names) (ptr ,(car params))))
+     (declare (ignorable ,(car names)))
      ,(next-ffi)))
 
 (defmethod foreign-to-ffi ((type foreign-string) names params fields body)
@@ -711,6 +716,7 @@ types."
                     (if make-function-p
                         `(defun ,fun-name (,@maybe-cbv-return
                                            ,@param-names ,@(when (foreign-function-variadic-p fun) `(&rest ,rest)))
+                           ,@(when maybe-cbv-return `((declare (ignorable ,@maybe-cbv-return))))
                            ,(let ((!fun (find-function name-or-function)))
                               (with-slots ((!fields fields)) !fun
                                 (foreign-to-ffi
@@ -722,6 +728,7 @@ types."
                                                        param-syms (when (foreign-function-variadic-p fun) rest))))))
                         `(defmacro ,fun-name (,@maybe-cbv-return
                                               ,@param-names ,@(when (foreign-function-variadic-p fun) `(&rest ,rest)))
+                           ,@(when maybe-cbv-return `((declare (ignorable ,@maybe-cbv-return))))
                            (let ((,!fun (find-function ',name-or-function)))
                              (with-slots ((,!fields fields)) ,!fun
                                (foreign-to-ffi
