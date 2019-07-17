@@ -23,6 +23,7 @@
    (:file "sffi")
    (:file "alloc")
    (:file "errno")
+   (:file "processing")
    (:file "parse")
    (:file "bitmask")))
 

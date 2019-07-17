@@ -8,6 +8,8 @@
 ;;; Note this is rather untested and not very extensive at the moment;
 ;;; it should probably work on linux/win/osx though.  Patches welcome.
 
+(declaim (special *local-os*))
+
 (defun local-cpu ()
   #+x86-64 "x86_64"
   #+(and (not (or x86-64 freebsd)) x86) "i686"
@@ -20,11 +22,12 @@
   #+(not (or linux windows darwin)) "-unknown")
 
 (defun local-os ()
-  #+linux "-linux"
-  #+windows "-windows-msvc"
-  #+darwin "-darwin9"
-  #+freebsd "-freebsd"
-  #+openbsd "-openbsd")
+  (or (and *local-os* (format nil "-~A" *local-os*))
+      #+linux "-linux"
+      #+windows "-windows-msvc"
+      #+darwin "-darwin9"
+      #+freebsd "-freebsd"
+      #+openbsd "-openbsd"))
 
 (defun local-environment ()
   #+linux "-gnu"
@@ -38,6 +41,8 @@
     "x86_64-pc-linux-gnu"
     "i686-pc-windows-msvc"
     "x86_64-pc-windows-msvc"
+    "i686-pc-windows-gnu"
+    "x86_64-pc-windows-gnu"
     "i686-apple-darwin9"
     "x86_64-apple-darwin9"
     "i386-unknown-freebsd"
@@ -62,6 +67,11 @@
 doesn't exist, we will get a return code other than 0."
   (zerop (nth-value 2 (uiop:run-program `(,*c2ffi-program* "-h") :ignore-error-status t))))
 
+
+(defun pass-through-processor (input output)
+  (uiop:copy-stream-to-stream input output :element-type 'base-char))
+
+
 ;;; UIOP:WITH-TEMPORARY-FILE does not seem to compile below as of asdf
 ;;; 3.1.5, and that's what SBCL is distributed with, so.
 (defmacro with-temporary-file ((&key pathname keep (stream (gensym "STREAM") streamp)) &body body)
@@ -71,7 +81,8 @@ doesn't exist, we will get a return code other than 0."
       ,@body)
     :keep ,keep))
 
-(defun run-c2ffi (input-file output-basename &key arch sysincludes ignore-error-status)
+(defun run-c2ffi (input-file output-basename &key arch sysincludes ignore-error-status
+                                               (spec-processor #'pass-through-processor))
   "Run c2ffi on `INPUT-FILE`, outputting to `OUTPUT-FILE` and
 `MACRO-OUTPUT-FILE`, optionally specifying a target triple `ARCH`."
   (with-temporary-file (:pathname tmp-macro-file
@@ -94,12 +105,16 @@ doesn't exist, we will get a return code other than 0."
           (format tmp-include-file-stream "#include \"~A\"~%" input-file)
           (format tmp-include-file-stream "#include \"~A\"~%" tmp-macro-file)
           (close tmp-include-file-stream)
-          ;; Invoke c2ffi again to generate the final output.
-          (run-check *c2ffi-program* (list* (namestring tmp-include-file) "-o" output-spec
-                                            (append arch sysincludes))
-                     :output *standard-output*
-                     :ignore-error-status ignore-error-status))))))
-
+          ;; Invoke c2ffi again to generate the raw output.
+          (with-temporary-file (:pathname tmp-raw-output)
+            (run-check *c2ffi-program* (list* (namestring tmp-include-file)
+                                              "-o" (namestring tmp-raw-output)
+                                              (append arch sysincludes))
+                       :output *standard-output*
+                       :ignore-error-status ignore-error-status)
+            (with-open-file (raw-input tmp-raw-output)
+              (with-open-file (final-output output-spec :direction :output :if-exists :supersede)
+                (funcall spec-processor raw-input final-output)))))))))
  ;; Specs and Loading
 
 (defun find-local-spec (name &optional (spec-path *default-pathname-defaults*))
@@ -116,7 +131,8 @@ if the file does not exist."
                           (spec-path *default-pathname-defaults*)
                           arch-excludes
                           sysincludes
-                          version)
+                          version
+                          spec-processor)
   (flet ((spec-path (arch) (string+ (namestring spec-path)
                                     (pathname-name name)
                                     (if version
@@ -133,7 +149,8 @@ if the file does not exist."
             (let ((arch (local-arch)))
               (run-c2ffi name (spec-path arch)
                          :arch arch
-                         :sysincludes sysincludes))
+                         :sysincludes sysincludes
+                         :spec-processor spec-processor))
             (loop with local-arch = (local-arch)
                   for arch in *known-arches* do
                     (unless (or (string= local-arch arch)
@@ -141,7 +158,8 @@ if the file does not exist."
                       (unless (run-c2ffi name (spec-path arch)
                                          :arch arch
                                          :sysincludes sysincludes
-                                         :ignore-error-status t)
+                                         :ignore-error-status t
+                                         :spec-processor spec-processor)
                         (warn "Error generating spec for other arch: ~S" arch))))
             (if-let (h-name (find-local-spec name spec-path))
               h-name
