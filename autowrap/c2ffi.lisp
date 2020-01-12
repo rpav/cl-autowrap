@@ -20,7 +20,7 @@
   #+(not (or linux windows darwin)) "-unknown")
 
 (defun local-os ()
-  #+linux "-linux"
+  #+(or linux android) "-linux"
   #+windows "-windows-msvc"
   #+darwin "-darwin9"
   #+freebsd "-freebsd"
@@ -28,7 +28,8 @@
 
 (defun local-environment ()
   #+linux "-gnu"
-  #-linux "")
+  #+android "-androideabi"
+  #+(not (or linux android)) "")
 
 (defun local-arch ()
   (string+ (local-cpu) (local-vendor) (local-os) (local-environment)))
@@ -44,7 +45,8 @@
     "x86_64-unknown-freebsd"
     "i386-unknown-openbsd"
     "x86_64-unknown-openbsd"
-    "arm-pc-linux-gnu"))
+    "arm-pc-linux-gnu"
+    "arm-unknown-linux-androideabi"))
 
  ;; c2ffi
 
