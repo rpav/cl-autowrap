@@ -50,6 +50,8 @@
 
  ;; c2ffi
 
+(defvar *autowrap-arch-override* nil)
+
 (defvar *c2ffi-program* "c2ffi")
 
 (defvar *trace-c2ffi* nil)
@@ -107,7 +109,7 @@ doesn't exist, we will get a return code other than 0."
 (defun find-local-spec (name &optional (spec-path *default-pathname-defaults*))
   "Return the path of the SPEC for this machine's architecture, or NIL
 if the file does not exist."
-  (let* ((arch (local-arch))
+  (let* ((arch (or *autowrap-arch-override* (local-arch)))
          (name (pathname-name name))
          (h-name (make-pathname :defaults spec-path
                                 :name (string+ name "." arch)
