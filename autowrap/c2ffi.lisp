@@ -12,7 +12,8 @@
   #+x86-64 "x86_64"
   #+(and (not (or x86-64 freebsd)) x86) "i686"
   #+(and (not x86-64) x86 freebsd) "i386"
-  #+arm "arm")
+  #+arm "arm"
+  #+arm64 "aarch64")
 
 (defun local-vendor ()
   #+(or linux windows) "-pc"
@@ -28,7 +29,8 @@
 
 (defun local-environment ()
   #+linux "-gnu"
-  #+android "-androideabi"
+  #+(and arm android) "-androideabi"
+  #+(and (not arm) android) "-android"
   #+(not (or linux android)) "")
 
 (defun local-arch ()
@@ -46,7 +48,10 @@
     "i386-unknown-openbsd"
     "x86_64-unknown-openbsd"
     "arm-pc-linux-gnu"
-    "arm-unknown-linux-androideabi"))
+    "arm-unknown-linux-androideabi"
+    "aarch64-unknown-linux-android"
+    "i686-unknown-linux-android"
+    "x86_64-unknown-linux-android"))
 
  ;; c2ffi
 
