@@ -97,7 +97,7 @@
    #:define-bitmask-from-constants #:define-bitmask-from-enum
 
    ;; Parsing and input
-   #:c-include #:*c2ffi-program*
+   #:c-include #:*c2ffi-program* #:*autowrap-arch-override*
 
    ;; Debug
    #:*trace-c2ffi*
