@@ -214,8 +214,9 @@
   (foreign-scalar-p (foreign-type field)))
 
 (defmethod foreign-scalar-p ((type foreign-record))
-  (when (eq :union (foreign-type type))
-       (every #'foreign-scalar-p (foreign-record-fields type))))
+  (when (and (eq :union (foreign-type type))
+             (foreign-record-fields type))
+    (every #'foreign-scalar-p (foreign-record-fields type))))
 
 (defmethod foreign-scalar-p ((type list))
   (let ((specifier (car type)))
