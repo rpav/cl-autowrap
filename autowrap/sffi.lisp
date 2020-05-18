@@ -31,8 +31,17 @@
  ;; Types
 
 (defclass foreign-type ()
-  ((name :initarg :name :initform nil :accessor foreign-type-name :type symbol)
+  ((name :initarg :name :initform nil :type symbol)
    (type :initarg :type :initform nil :accessor foreign-type :type (not null))))
+
+(defgeneric foreign-type-name (object))
+(defmethod foreign-type-name ((object foreign-type))
+  (with-slots (name) object
+     (if (and name (eq (symbol-package name) #.(find-package :cl)))
+       ;; when a symbol belongs to `:cl' package, we have to rename it to avoid name conflcit.
+       ;; for example symbol `t' is not a legal symbol name for function/structure argument in common lisp.
+       (intern (format nil "C-~A" (symbol-name name)))
+       name)))
 
 (defmethod foreign-type-name ((object symbol))
   (if (keywordp object)
@@ -214,8 +223,9 @@
   (foreign-scalar-p (foreign-type field)))
 
 (defmethod foreign-scalar-p ((type foreign-record))
-  (when (eq :union (foreign-type type))
-       (every #'foreign-scalar-p (foreign-record-fields type))))
+  (when (and (eq :union (foreign-type type))
+             (foreign-record-fields type))
+    (every #'foreign-scalar-p (foreign-record-fields type))))
 
 (defmethod foreign-scalar-p ((type list))
   (let ((specifier (car type)))
