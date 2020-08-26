@@ -32,7 +32,7 @@
 
 (defclass foreign-type ()
   ((name :initarg :name :initform nil :accessor foreign-type-name :type symbol)
-   (type :initarg :type :initform nil :accessor foreign-type :type (not null))))
+   (type :initarg :type :initform t :accessor foreign-type :type (not null))))
 
 (defmethod foreign-type-name ((object symbol))
   (if (keywordp object)
