@@ -48,6 +48,7 @@
     "i386-unknown-openbsd"
     "x86_64-unknown-openbsd"
     "arm-pc-linux-gnu"
+    "aarch64-pc-linux-gnu"
     "arm-unknown-linux-androideabi"
     "aarch64-unknown-linux-android"
     "i686-unknown-linux-android"
