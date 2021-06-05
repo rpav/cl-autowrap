@@ -103,7 +103,7 @@ doesn't exist, we will get a return code other than 0."
           (format tmp-include-file-stream "#include \"~A\"~%" tmp-macro-file)
           (close tmp-include-file-stream)
           ;; Invoke c2ffi again to generate the final output.
-          (run-check *c2ffi-program* (list* (namestring tmp-include-file) "-o" output-spec
+          (run-check *c2ffi-program* (list* (namestring tmp-include-file) "--lang" "c" "--output" output-spec
                                             (append arch sysincludes))
                      :output *standard-output*
                      :ignore-error-status ignore-error-status))))))
