@@ -77,7 +77,8 @@ doesn't exist, we will get a return code other than 0."
     (lambda (,stream ,pathname)
       (unless ,streamp (close ,stream))
       ,@body)
-    :keep ,keep))
+    :keep ,keep
+    :type "c"))
 
 (defun run-c2ffi (input-file output-basename &key arch sysincludes ignore-error-status)
   "Run c2ffi on `INPUT-FILE`, outputting to `OUTPUT-FILE` and
