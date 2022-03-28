@@ -251,8 +251,11 @@
                                `((let ((,tmp
                                          ,(if from
                                               from
-                                              `(let ((,tmp (,(gethash (foreign-type-name type)
-                                                                      autowrap::*wrapper-constructors*))))
+                                              `(let ((,tmp (,(if (typep type 'foreign-alias)
+                                                                 (gethash (foreign-type-name (foreign-type type))
+                                                                          autowrap::*wrapper-constructors*)
+                                                                 (gethash (foreign-type-name type)
+                                                                          autowrap::*wrapper-constructors*)))))
                                                  (setf (autowrap::wrapper-ptr ,tmp) ,ptr)
                                                  ,tmp))))
                                    ,@(maybe-make-macro bindings rest tmp v c-type nil))))
