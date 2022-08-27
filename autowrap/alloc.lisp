@@ -24,7 +24,9 @@
     #+x86
     (define-foreign-type 'size-t 'uint32)
     #+arm
-    (define-foreign-type 'size-t 'uint32))
+    (define-foreign-type 'size-t 'uint32)
+    #+arm64
+    (define-foreign-type 'size-t 'uint64))
 
   (define-foreign-function '(c-malloc "malloc") :pointer
     '((size size-t)))
