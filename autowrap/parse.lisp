@@ -49,6 +49,7 @@
 (defun default-foreign-type-symbol (string type package)
   (let ((string (or (and *foreign-symbol-exceptions*
                          (gethash string *foreign-symbol-exceptions*))
+                    (and (eq type :cparam) string)
                     (funcall *foreign-c-to-lisp-function*
                              (if *foreign-symbol-regex*
                                  (apply-regexps string *foreign-symbol-regex*)
