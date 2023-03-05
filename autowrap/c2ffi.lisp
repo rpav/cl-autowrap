@@ -80,7 +80,7 @@ doesn't exist, we will get a return code other than 0."
     :keep ,keep
     :type "c"))
 
-(defun run-c2ffi (input-file output-basename &key arch sysincludes ignore-error-status)
+(defun run-c2ffi (input-file output-basename &key arch sysincludes ignore-error-status macro-constants)
   "Run c2ffi on `INPUT-FILE`, outputting to `OUTPUT-FILE` and
 `MACRO-OUTPUT-FILE`, optionally specifying a target triple `ARCH`."
   (with-temporary-file (:pathname tmp-macro-file
@@ -90,12 +90,19 @@ doesn't exist, we will get a return code other than 0."
            (sysincludes (loop for dir in sysincludes
                               append (list "-i" dir))))
       ;; Invoke c2ffi to emit macros into TMP-MACRO-FILE
-      (when (run-check *c2ffi-program* (list* (namestring input-file)
-                                              "-D" "null"
-                                              "-M" (namestring tmp-macro-file)
-                                              (append arch sysincludes))
-                       :output *standard-output*
-                       :ignore-error-status ignore-error-status)
+      (when (if (eq :auto macro-constants)
+                (progn (format t "Trying to generate macro constants automatically")
+                       (run-check *c2ffi-program* (list* (namestring input-file)
+                                                         "-D" "null"
+                                                         "-M" (namestring tmp-macro-file)
+                                                         (append arch sysincludes))
+                                  :output *standard-output*
+                                  :ignore-error-status ignore-error-status))
+                (progn (format t "Using manually provided list of macro constants~%")
+                       (with-open-file (stream tmp-macro-file :direction :output :if-exists :supersede)
+                         (loop for spec in macro-constants
+                            do (format stream "const ~a __c2ffi_~a = ~a;~%" (car spec) (cadr spec) (cadr spec)))
+                         t)))
         ;; Write a tmp header file that #include's the input file and the macros file.
         (with-temporary-file (:stream tmp-include-file-stream
                               :pathname tmp-include-file
@@ -125,7 +132,8 @@ if the file does not exist."
                           (spec-path *default-pathname-defaults*)
                           arch-excludes
                           sysincludes
-                          version)
+                          version
+                          macro-constants)
   (flet ((spec-path (arch) (string+ (namestring spec-path)
                                     (pathname-name name)
                                     (if version
@@ -142,7 +150,8 @@ if the file does not exist."
             (let ((arch (local-arch)))
               (run-c2ffi name (spec-path arch)
                          :arch arch
-                         :sysincludes sysincludes))
+                         :sysincludes sysincludes
+                         :macro-constants macro-constants))
             (loop with local-arch = (local-arch)
                   for arch in *known-arches* do
                     (unless (or (string= local-arch arch)
@@ -150,7 +159,8 @@ if the file does not exist."
                       (unless (run-c2ffi name (spec-path arch)
                                          :arch arch
                                          :sysincludes sysincludes
-                                         :ignore-error-status t)
+                                         :ignore-error-status t
+                                         :macro-constants macro-constants)
                         (warn "Error generating spec for other arch: ~S" arch))))
             (if-let (h-name (find-local-spec name spec-path))
               h-name

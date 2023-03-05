@@ -396,14 +396,15 @@ Return the appropriate CFFI name."))
                      sysincludes
                      (definition-package *package*)
                      (function-package definition-package)
-                     (wrapper-package definition-package)
+                     (wrapper-package function-package)
                      (accessor-package wrapper-package)
-                     (constant-package definition-package)
+                     (constant-package accessor-package)
                      (extern-package accessor-package)
                      constant-accessor exclude-constants
                      (trace-c2ffi *trace-c2ffi*) no-accessors no-functions
                      release-p version
-                     type-symbol-function c-to-lisp-function)
+                     type-symbol-function c-to-lisp-function
+                     (macro-constants nil macro-constants-p))
   (let ((*foreign-symbol-exceptions* (alist-hash-table symbol-exceptions :test 'equal))
         (*foreign-symbol-regex* (make-scanners symbol-regex))
         (*foreign-constant-excludes* (mapcar #'ppcre:create-scanner exclude-constants))
@@ -427,14 +428,18 @@ Return the appropriate CFFI name."))
         (constant-package (find-package constant-package))
         (extern-package (find-package extern-package))
         (constant-name-value-map (gensym "CONSTANT-NAME-VALUE-MAP-"))
-        (old-mute-reporting *mute-reporting-p*))
+        (old-mute-reporting *mute-reporting-p*)
+        (macro-constants (if macro-constants-p
+                             (eval macro-constants)
+                             :auto)))
     (multiple-value-bind (spec-name)
         (let ((*trace-c2ffi* trace-c2ffi))
           (ensure-local-spec h-file
                              :spec-path spec-path
                              :arch-excludes exclude-arch
                              :sysincludes sysincludes
-                             :version version))
+                             :version version
+                             :macro-constants macro-constants))
       (with-open-file (in-spec spec-name)
         (collecting-symbols
           `(progn
