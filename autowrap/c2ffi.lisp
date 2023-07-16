@@ -12,6 +12,8 @@
   #+x86-64 "x86_64"
   #+(and (not (or x86-64 freebsd)) x86) "i686"
   #+(and (not x86-64) x86 freebsd) "i386"
+  #+(and ppc64 big-endian) "powerpc64"
+  #+(and ppc64 little-endian) "powerpc64le"
   #+arm "arm"
   #+arm64 "aarch64")
 
@@ -51,6 +53,8 @@
     "aarch64-pc-linux-gnu"
     "arm-unknown-linux-androideabi"
     "aarch64-unknown-linux-android"
+    "powerpc64-linux-gnu"
+    "powerpc64le-linux-gnu"
     "i686-unknown-linux-android"
     "x86_64-unknown-linux-android"))
 
