@@ -124,6 +124,7 @@ if the file does not exist."
 (defun ensure-local-spec (name &key
                           (spec-path *default-pathname-defaults*)
                           arch-excludes
+                          arch-includes
                           sysincludes
                           version)
   (flet ((spec-path (arch) (string+ (namestring spec-path)
@@ -146,7 +147,9 @@ if the file does not exist."
             (loop with local-arch = (local-arch)
                   for arch in *known-arches* do
                     (unless (or (string= local-arch arch)
-                                (member arch arch-excludes :test #'string=))
+                                (member arch arch-excludes :test #'string=)
+                                (and arch-includes
+                                     (not (member arch arch-includes :test #'string=))))
                       (unless (run-c2ffi name (spec-path arch)
                                          :arch arch
                                          :sysincludes sysincludes
