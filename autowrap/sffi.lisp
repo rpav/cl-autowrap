@@ -379,6 +379,9 @@ call it.  "
                                  :type return-type
                                  :variadic-p variadic-p)))
         (setf (foreign-record-fields fun)
+	      ;; one solution for function poiner params
+	      ;; is to set the parameter to be a pointer in the function params:
+	      ;; see make-foreign-funcall
               (loop for param in params
                  collect (make-instance 'foreign-field :name (car param)
                                         :type (ensure-type (cadr param) "function ~S (nee ~S) due to parameter ~S of type ~S"
@@ -689,8 +692,13 @@ types."
                          `(cffi-sys:%foreign-funcall ,c-symbol
                                                      (,@(loop for f in fields
                                                               for s in param-names
-                                                              collect (basic-foreign-type f)
-                                                              collect s)
+							   ;; see define-foreign-function for the
+							   ;; other solution for function pointers
+                                                           collect (let ((type (basic-foreign-type f)))
+								     (if (equalp type :function)
+									 :pointer
+									 type))
+							   collect s)
                                                       ,@vargs
                                                       ,(basic-foreign-type
                                                         (foreign-type fun)))
