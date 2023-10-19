@@ -390,6 +390,7 @@ Return the appropriate CFFI name."))
  ;; Exported API
 
 (defmacro c-include (h-file &key (spec-path *default-pathname-defaults*)
+                     (force-arch *autowrap-arch-override*)
                      symbol-exceptions symbol-regex
                      exclude-definitions exclude-sources exclude-arch
                      include-definitions include-sources
@@ -429,7 +430,8 @@ Return the appropriate CFFI name."))
         (constant-name-value-map (gensym "CONSTANT-NAME-VALUE-MAP-"))
         (old-mute-reporting *mute-reporting-p*))
     (multiple-value-bind (spec-name)
-        (let ((*trace-c2ffi* trace-c2ffi))
+        (let ((*trace-c2ffi* trace-c2ffi)
+              (*autowrap-arch-override* force-arch))
           (ensure-local-spec h-file
                              :spec-path spec-path
                              :arch-excludes exclude-arch
